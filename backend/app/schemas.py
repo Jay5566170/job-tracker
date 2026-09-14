@@ -63,6 +63,11 @@ class ApplicationCreate(BaseModel):
     status: str = "applied"
     notes: Optional[str] = None
 
+
+class ApplicationUpdate(BaseModel):
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
 class ApplicationResponse(BaseModel):
     id: int
     user_id: int
