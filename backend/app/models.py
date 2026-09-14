@@ -17,12 +17,13 @@ class User(Base):
     # Relationships
     resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan")
     applications = relationship("Application", back_populates="user", cascade="all, delete-orphan")
-
+    jobs = relationship("Job", back_populates="user", cascade="all, delete-orphan")  
 
 class Job(Base):
     __tablename__ = "jobs"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # ← ADD THIS
     company = Column(String(100), nullable=False)
     role = Column(String(100), nullable=False)
     url = Column(String(500), nullable=True)
@@ -30,6 +31,7 @@ class Job(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
+    user = relationship("User", back_populates="jobs")  # ← ADD THIS
     applications = relationship("Application", back_populates="job", cascade="all, delete-orphan")
 
 

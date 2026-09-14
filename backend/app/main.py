@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import auth
+from app.routes import auth, jobs  # ← Add jobs
 
 app = FastAPI(
     title="Job Tracker API",
@@ -9,6 +9,7 @@ app = FastAPI(
 
 # Include routers
 app.include_router(auth.router)
+app.include_router(jobs.router)  # ← Add this
 
 @app.get("/")
 def root():

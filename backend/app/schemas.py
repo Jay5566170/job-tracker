@@ -34,6 +34,7 @@ class JobCreate(BaseModel):
 
 class JobResponse(BaseModel):
     id: int
+    user_id: int       # ← ADD THIS
     company: str
     role: str
     url: Optional[str]
