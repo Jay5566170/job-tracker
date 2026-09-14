@@ -65,3 +65,63 @@ def extract_resume_data(text: str) -> dict:
             "summary": None,
             "error": str(e)
         }
+
+def match_resume_to_job(resume_skills: str, job_description: str) -> dict:
+    """Use AI to match a resume to a job description."""
+    
+    if not resume_skills or not job_description:
+        return {
+            "match_score": 0,
+            "matching_skills": [],
+            "missing_skills": [],
+            "recommendation": "Not enough data to match."
+        }
+    
+    if model is None:
+        return {
+            "match_score": 0,
+            "matching_skills": [],
+            "missing_skills": [],
+            "recommendation": "AI not configured."
+        }
+    
+    prompt = f"""
+    Compare this resume to this job description. Return ONLY a JSON response:
+    {{
+        "match_score": 0-100,
+        "matching_skills": ["skill1", "skill2"],
+        "missing_skills": ["skill3", "skill4"],
+        "recommendation": "A brief 1-2 sentence recommendation"
+    }}
+    
+    Resume Skills:
+    {resume_skills}
+    
+    Job Description:
+    {job_description[:2000]}
+    """
+    
+    try:
+        response = model.generate_content(prompt)
+        result_text = response.text.strip()
+        
+        # Clean markdown
+        if "```json" in result_text:
+            start = result_text.find("```json") + 7
+            end = result_text.rfind("```")
+            result_text = result_text[start:end].strip()
+        elif "```" in result_text:
+            start = result_text.find("```") + 3
+            end = result_text.rfind("```")
+            result_text = result_text[start:end].strip()
+        
+        data = json.loads(result_text)
+        return data
+    except Exception as e:
+        print(f"AI matching error: {e}")
+        return {
+            "match_score": 0,
+            "matching_skills": [],
+            "missing_skills": [],
+            "recommendation": f"Error: {str(e)}"
+        }

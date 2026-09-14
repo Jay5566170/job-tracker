@@ -3,6 +3,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
+from typing import Optional, List
 
 # ============ AUTH SCHEMAS ============
 class UserCreate(BaseModel):
@@ -79,3 +80,10 @@ class ApplicationResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+        # ============ MATCH SCHEMAS ============
+class MatchResult(BaseModel):
+    match_score: int
+    matching_skills: List[str]
+    missing_skills: List[str]
+    recommendation: str
