@@ -57,3 +57,39 @@ def delete_one_job(
 ):
     """Delete a job."""
     return delete_job(db, job_id, current_user.id)
+
+# Add these imports at top
+from app.schemas import JobCreate, JobResponse, ParseURLRequest, ParseTextRequest, ParsedJob
+from app.utils.url_fetcher import fetch_url_content
+from app.services.ai_service import parse_job_description
+
+
+# Add these endpoints at bottom
+@router.post("/parse-url", response_model=ParsedJob)
+def parse_job_from_url(
+    data: ParseURLRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Parse a job from a URL."""
+    # Fetch content from URL
+    text = fetch_url_content(data.url)
+    if not text:
+        raise HTTPException(
+            status_code=400,
+            detail="Could not fetch URL content"
+        )
+    
+    # Parse with AI
+    parsed = parse_job_description(text)
+    parsed["url"] = data.url
+    return parsed
+
+
+@router.post("/parse-text", response_model=ParsedJob)
+def parse_job_from_text(
+    data: ParseTextRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Parse a job from pasted text."""
+    parsed = parse_job_description(data.text)
+    return parsed

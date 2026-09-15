@@ -87,3 +87,18 @@ class MatchResult(BaseModel):
     matching_skills: List[str]
     missing_skills: List[str]
     recommendation: str
+
+    # ============ PARSING SCHEMAS ============
+class ParseURLRequest(BaseModel):
+    url: str
+
+
+class ParseTextRequest(BaseModel):
+    text: str
+
+
+class ParsedJob(BaseModel):
+    company: Optional[str] = None
+    role: Optional[str] = None
+    description: Optional[str] = None
+    url: Optional[str] = None
