@@ -4,6 +4,11 @@ import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Jobs from './pages/Jobs';
+import AddJob from './pages/AddJob';
+import JobDetails from './pages/JobDetails';
+import Resumes from './pages/Resumes';
+import Matches from './pages/Matches';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -21,6 +26,11 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
+          <Route path="/jobs/add" element={<ProtectedRoute><AddJob /></ProtectedRoute>} />
+          <Route path="/jobs/:id" element={<ProtectedRoute><JobDetails /></ProtectedRoute>} />
+          <Route path="/resumes" element={<ProtectedRoute><Resumes /></ProtectedRoute>} />
+          <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
