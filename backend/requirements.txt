@@ -10,3 +10,4 @@ python-multipart
 requests
 beautifulsoup4
 google-generativeai
+PyPDF2
