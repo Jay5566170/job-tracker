@@ -40,10 +40,6 @@ A full-stack web application that helps job seekers track applications and match
 - **State:** Context API
 - **Deployment:** Vercel
 
-## 📂 Project Structure
-
-
-## 📂 Project Structure
 job-tracker/
 ├── backend/
 │ ├── app/
@@ -71,7 +67,6 @@ job-tracker/
 │ │ └── url_fetcher.py
 │ ├── requirements.txt
 │ └── run.py
-│
 ├── frontend/
 │ ├── src/
 │ │ ├── components/
@@ -92,7 +87,6 @@ job-tracker/
 │ │ ├── App.jsx
 │ │ └── main.jsx
 │ └── package.json
-│
 └── README.md
 
 text
@@ -118,7 +112,7 @@ pip install -r requirements.txt
 Create .env:
 
 env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/job_tracker
+DATABASE_URL=postgresql://user:password@host:5432/dbname
 SECRET_KEY=your-secret-key
 GEMINI_API_KEY=your-gemini-key
 Run:
@@ -199,10 +193,16 @@ CORS handling
 
 Environment variables
 
-Deployment
+Cloud deployment (FastAPI Cloud, Vercel, Neon)
 
 🔗 Links
-GitHub: Jay5566170/job-tracker
+Live Frontend: job-tracker-jay5566170.vercel.app
+
+Live Backend: job-tracker.fastapicloud.dev
+
+API Docs: job-tracker.fastapicloud.dev/docs
+
+GitHub: github.com/Jay5566170/job-tracker
 
 📄 License
 For learning and portfolio purposes.
