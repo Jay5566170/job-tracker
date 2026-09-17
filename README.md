@@ -2,12 +2,12 @@
 
 A full-stack web application that helps job seekers track applications and match resumes to jobs using AI.
 
-![Status](https://img.shields.io/badge/status-complete-brightgreen)
+## 🔴 Live Demo
 
-## 🚀 Live Demo
-
-- **Frontend:** [Coming soon]
-- **Backend API:** [Coming soon]
+- **🚀 Frontend:** [https://job-tracker-jay5566170.vercel.app](https://job-tracker-jay5566170.vercel.app)
+- **⚙️ Backend API:** [https://job-tracker.fastapicloud.dev](https://job-tracker.fastapicloud.dev)
+- **📖 API Docs (Swagger):** [https://job-tracker.fastapicloud.dev/docs](https://job-tracker.fastapicloud.dev/docs)
+- **📂 GitHub:** [github.com/Jay5566170/job-tracker](https://github.com/Jay5566170/job-tracker)
 
 ## ✨ Features
 
@@ -23,20 +23,25 @@ A full-stack web application that helps job seekers track applications and match
 ## 🛠️ Tech Stack
 
 ### Backend
+
 - **Framework:** FastAPI
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL (Neon)
 - **ORM:** SQLAlchemy
 - **Auth:** JWT, PBKDF2
 - **AI:** Google Gemini API
 - **PDF:** PyPDF2
-- **Deployment:** Railway
+- **Deployment:** FastAPI Cloud
 
 ### Frontend
+
 - **Framework:** React 19 + Vite
 - **Routing:** React Router 7
 - **HTTP:** Axios
 - **State:** Context API
 - **Deployment:** Vercel
+
+## 📂 Project Structure
+
 
 ## 📂 Project Structure
 job-tracker/
