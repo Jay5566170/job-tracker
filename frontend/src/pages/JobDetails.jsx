@@ -6,11 +6,13 @@ function JobDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [job, setJob] = useState(null);
+  const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+useEffect(() => {
     loadJob();
-  }, [id]);
+    loadApplication();
+}, [id]);
 
   const loadJob = async () => {
     try {
@@ -23,6 +25,21 @@ function JobDetails() {
       setLoading(false);
     }
   };
+
+  const loadApplication = async () => {
+    try {
+        const response = await api.get("/applications/");
+        
+        const existingApplication = response.data.find(
+            app => app.job_id === Number(id)
+        );
+
+        setApplication(existingApplication || null);
+
+    } catch(error) {
+        console.log("No application found");
+    }
+};
 
   const deleteJob = async () => {
     if (!window.confirm('Delete this job?')) return;

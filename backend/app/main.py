@@ -3,12 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth, jobs, resumes, applications, matches
 from app.database import engine, Base
 from app import models
+from fastapi.staticfiles import StaticFiles
 
 
 app = FastAPI(
     title="Job Tracker API",
     description="Track job applications with AI-powered matching",
     version="1.0.0"
+)
+app.mount(
+    "/uploads",
+    StaticFiles(directory="uploads"),
+    name="uploads"
 )
 
 # CORS

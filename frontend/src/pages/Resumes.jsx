@@ -114,12 +114,33 @@ function Resumes() {
                   </div>
                 </div>
               )}
-              <button
-                onClick={() => deleteResume(resume.id)}
-                style={styles.deleteButton}
-              >
-                Delete
-              </button>
+              <div style={styles.actions}>
+
+  <a
+    href={`http://127.0.0.1:8000/${resume.file_path}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    style={styles.viewButton}
+  >
+    👁 View
+  </a>
+
+  <a
+    href={`http://127.0.0.1:8000/${resume.file_path}`}
+    download
+    style={styles.downloadButton}
+  >
+    ⬇ Download
+  </a>
+
+  <button 
+    onClick={() => deleteResume(resume.id)}
+    style={styles.deleteButton}
+  >
+    Delete
+  </button>
+
+</div>
             </div>
           ))}
         </div>
@@ -170,6 +191,32 @@ const styles = {
     borderRadius: '12px', 
     fontSize: '12px' 
   },
+  actions: {
+  display: 'flex',
+  gap: '10px',
+  marginTop: '15px',
+  flexWrap: 'wrap',
+},
+
+viewButton: {
+  padding: '8px 16px',
+  background: '#4fc3f7',
+  color: 'white',
+  textDecoration: 'none',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  fontSize: '14px',
+},
+
+downloadButton: {
+  padding: '8px 16px',
+  background: '#66bb6a',
+  color: 'white',
+  textDecoration: 'none',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  fontSize: '14px',
+},
   deleteButton: { 
     padding: '8px 16px', 
     background: '#ef5350', 
