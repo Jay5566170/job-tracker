@@ -2,12 +2,12 @@
 
 A full-stack web application that helps job seekers track applications and match resumes to jobs using AI.
 
-![Status](https://img.shields.io/badge/status-complete-brightgreen)
+## 🔴 Live Demo
 
-## 🚀 Live Demo
-
-- **Frontend:** [Coming soon]
-- **Backend API:** [Coming soon]
+- **🚀 Frontend:** [https://job-tracker-jay5566170.vercel.app](https://job-tracker-jay5566170.vercel.app)
+- **⚙️ Backend API:** [https://job-tracker.fastapicloud.dev](https://job-tracker.fastapicloud.dev)
+- **📖 API Docs (Swagger):** [https://job-tracker.fastapicloud.dev/docs](https://job-tracker.fastapicloud.dev/docs)
+- **📂 GitHub:** [github.com/Jay5566170/job-tracker](https://github.com/Jay5566170/job-tracker)
 
 ## ✨ Features
 
@@ -23,22 +23,23 @@ A full-stack web application that helps job seekers track applications and match
 ## 🛠️ Tech Stack
 
 ### Backend
+
 - **Framework:** FastAPI
-- **Database:** PostgreSQL
+- **Database:** PostgreSQL (Neon)
 - **ORM:** SQLAlchemy
 - **Auth:** JWT, PBKDF2
 - **AI:** Google Gemini API
 - **PDF:** PyPDF2
-- **Deployment:** Railway
+- **Deployment:** FastAPI Cloud
 
 ### Frontend
+
 - **Framework:** React 19 + Vite
 - **Routing:** React Router 7
 - **HTTP:** Axios
 - **State:** Context API
 - **Deployment:** Vercel
 
-## 📂 Project Structure
 job-tracker/
 ├── backend/
 │ ├── app/
@@ -66,7 +67,6 @@ job-tracker/
 │ │ └── url_fetcher.py
 │ ├── requirements.txt
 │ └── run.py
-│
 ├── frontend/
 │ ├── src/
 │ │ ├── components/
@@ -87,7 +87,6 @@ job-tracker/
 │ │ ├── App.jsx
 │ │ └── main.jsx
 │ └── package.json
-│
 └── README.md
 
 text
@@ -113,7 +112,7 @@ pip install -r requirements.txt
 Create .env:
 
 env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/job_tracker
+DATABASE_URL=postgresql://user:password@host:5432/dbname
 SECRET_KEY=your-secret-key
 GEMINI_API_KEY=your-gemini-key
 Run:
@@ -194,10 +193,16 @@ CORS handling
 
 Environment variables
 
-Deployment
+Cloud deployment (FastAPI Cloud, Vercel, Neon)
 
 🔗 Links
-GitHub: Jay5566170/job-tracker
+Live Frontend: job-tracker-jay5566170.vercel.app
+
+Live Backend: job-tracker.fastapicloud.dev
+
+API Docs: job-tracker.fastapicloud.dev/docs
+
+GitHub: github.com/Jay5566170/job-tracker
 
 📄 License
 For learning and portfolio purposes.
