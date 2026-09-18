@@ -6,7 +6,7 @@ function Dashboard() {
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>Welcome, {user?.email}</h1>
+      <h1 style={styles.title}>Welcome Back 👋</h1>
       <div style={styles.grid}>
         <Link to="/jobs" style={styles.card}>
           <h3>📋 My Jobs</h3>
