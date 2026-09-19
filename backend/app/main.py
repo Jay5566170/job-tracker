@@ -4,7 +4,7 @@ from app.routes import auth, jobs, resumes, applications, matches
 from app.database import engine, Base
 from app import models
 from fastapi.staticfiles import StaticFiles
-
+from app.routes import dashboard
 
 app = FastAPI(
     title="Job Tracker API",
@@ -43,7 +43,7 @@ app.include_router(jobs.router)
 app.include_router(resumes.router)
 app.include_router(applications.router)
 app.include_router(matches.router)
-
+app.include_router(dashboard.router)
 
 @app.get("/")
 def root():
