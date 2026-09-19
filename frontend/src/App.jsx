@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Navbar from "./components/navbar";
+import Navbar from "./components/Navbar";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 import Dashboard from "./pages/Dashboard";
-import Jobs from "./pages/jobs";
+import Jobs from "./pages/Jobs";
 import AddJob from "./pages/AddJob";
 import JobDetails from "./pages/JobDetails";
 
