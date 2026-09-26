@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import api from "../services/api";
 import BackButton from "../components/BackButton";
 
@@ -27,22 +27,14 @@ const [result,setResult]=useState(null);
 const [loading,setLoading]=useState(true);
 
 const [matching,setMatching]=useState(false);
+const [loadError,setLoadError]=useState("");
+const [matchError,setMatchError]=useState("");
 
 
 
 
 
-useEffect(()=>{
-
-loadData();
-
-},[]);
-
-
-
-
-
-const loadData=async()=>{
+const loadData=useCallback(async()=>{
 
 
 try{
@@ -66,6 +58,7 @@ setJobs(jobResponse.data);
 }catch(error){
 
 console.error(error);
+setLoadError(error.response?.data?.detail || error.message || "Could not load resumes and jobs.");
 
 
 }finally{
@@ -75,7 +68,11 @@ setLoading(false);
 }
 
 
-};
+},[]);
+
+useEffect(()=>{
+void Promise.resolve().then(loadData);
+},[loadData]);
 
 
 
@@ -98,7 +95,7 @@ return;
 
 setMatching(true);
 
-setResult(null);
+setMatchError("");
 
 
 
@@ -119,8 +116,7 @@ setResult(response.data);
 }catch(error){
 
 console.error(error);
-
-alert("Matching failed");
+setMatchError(error.response?.data?.detail || error.message || "Matching failed. Please try again.");
 
 
 }finally{
@@ -175,6 +171,7 @@ Compare your resume with jobs using AI
 
 </p>
 
+{loadError && <p role="alert" style={styles.error}>{loadError}</p>}
 
 
 
@@ -334,8 +331,7 @@ matching
 
 </button>
 
-
-
+{matchError && <p role="alert" style={styles.error}>{matchError}</p>}
 
 </div>
 
@@ -746,13 +742,13 @@ borderRadius:"8px"
 
 
 loading:{
-
 padding:"40px",
-
 textAlign:"center"
-
+},
+error:{
+color:"#b91c1c",
+marginTop:"12px"
 }
-
 
 
 };

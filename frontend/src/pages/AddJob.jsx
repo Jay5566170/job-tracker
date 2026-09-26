@@ -1,515 +1,197 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { FaBriefcase, FaEye, FaTrash, FaArrowLeft } from "react-icons/fa";
-import api from "../services/api";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaArrowLeft, FaSave } from 'react-icons/fa';
+import api from '../services/api';
 
+function AddJob() {
+  const navigate = useNavigate();
+  const [mode, setMode] = useState('manual');
+  const [company, setCompany] = useState('');
+  const [role, setRole] = useState('');
+  const [url, setUrl] = useState('');
+  const [description, setDescription] = useState('');
+  const [parseUrl, setParseUrl] = useState('');
+  const [parseText, setParseText] = useState('');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [parsing, setParsing] = useState(false);
 
-function Jobs() {
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setNotice('');
 
+    const trimmedCompany = company.trim();
+    const trimmedRole = role.trim();
+    if (!trimmedCompany || !trimmedRole) {
+      setError('Company and job title are required.');
+      return;
+    }
 
-const [jobs,setJobs]=useState([]);
-const [loading,setLoading]=useState(true);
+    setSaving(true);
+    try {
+      const response = await api.post('/jobs/', {
+        company: trimmedCompany,
+        role: trimmedRole,
+        url: url.trim() || null,
+        description: description.trim() || null,
+      });
+      navigate(`/jobs/${response.data.id}`);
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || requestError.message || 'Could not create the job.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
+  const parseJob = async (endpoint, payload, sourceUrl = '') => {
+    setError('');
+    setNotice('');
+    setParsing(true);
+    try {
+      const response = await api.post(endpoint, payload);
+      setCompany(response.data.company || '');
+      setRole(response.data.role || '');
+      setUrl(response.data.url || sourceUrl);
+      setDescription(response.data.description || '');
+      setMode('manual');
+      setNotice('Job details parsed. Review them and save the job.');
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || requestError.message || 'Could not parse the job details.');
+    } finally {
+      setParsing(false);
+    }
+  };
 
+  return (
+    <main style={styles.container}>
+      <Link to="/jobs" style={styles.back}><FaArrowLeft /> Back to Jobs</Link>
+      <section style={styles.card}>
+        <h1>Add Job</h1>
+        {error && <p role="alert" style={styles.error}>{error}</p>}
+        {notice && <p role="status" style={styles.notice}>{notice}</p>}
 
-useEffect(()=>{
+        <div style={styles.tabs} aria-label="Job entry method">
+          <button type="button" onClick={() => setMode('manual')} style={mode === 'manual' ? styles.activeTab : styles.tab}>Manual</button>
+          <button type="button" onClick={() => setMode('url')} style={mode === 'url' ? styles.activeTab : styles.tab}>From URL</button>
+          <button type="button" onClick={() => setMode('text')} style={mode === 'text' ? styles.activeTab : styles.tab}>From Text</button>
+        </div>
 
-loadJobs();
+        {mode === 'url' && (
+          <div>
+            <label style={styles.label} htmlFor="parse-url">Job posting URL</label>
+            <input
+              id="parse-url"
+              type="url"
+              value={parseUrl}
+              onChange={(event) => setParseUrl(event.target.value)}
+              placeholder="https://example.com/jobs/123"
+              required
+              style={styles.input}
+            />
+            <button
+              type="button"
+              disabled={parsing || !parseUrl.trim()}
+              onClick={() => parseJob('/jobs/parse-url', { url: parseUrl.trim() }, parseUrl.trim())}
+              style={styles.submit}
+            >
+              {parsing ? 'Parsing...' : 'Parse URL'}
+            </button>
+          </div>
+        )}
 
-},[]);
+        {mode === 'text' && (
+          <div>
+            <label style={styles.label} htmlFor="parse-text">Job description text</label>
+            <textarea
+              id="parse-text"
+              value={parseText}
+              onChange={(event) => setParseText(event.target.value)}
+              rows={8}
+              required
+              style={styles.textarea}
+            />
+            <button
+              type="button"
+              disabled={parsing || !parseText.trim()}
+              onClick={() => parseJob('/jobs/parse-text', { text: parseText.trim() })}
+              style={styles.submit}
+            >
+              {parsing ? 'Parsing...' : 'Parse Text'}
+            </button>
+          </div>
+        )}
 
+        {mode === 'manual' && (
+          <form onSubmit={handleSubmit}>
+            <label style={styles.label} htmlFor="company">Company *</label>
+            <input
+              id="company"
+              name="company"
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+              maxLength={100}
+              required
+              style={styles.input}
+            />
 
+            <label style={styles.label} htmlFor="role">Job title *</label>
+            <input
+              id="role"
+              name="role"
+              value={role}
+              onChange={(event) => setRole(event.target.value)}
+              maxLength={100}
+              required
+              style={styles.input}
+            />
 
-const loadJobs=async()=>{
+            <label style={styles.label} htmlFor="url">Job posting URL</label>
+            <input
+              id="url"
+              name="url"
+              type="url"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              maxLength={500}
+              placeholder="https://example.com/jobs/123"
+              style={styles.input}
+            />
 
-try{
+            <label style={styles.label} htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={7}
+              style={styles.textarea}
+            />
 
-const response=await api.get("/jobs/");
-setJobs(response.data);
-
-
-}catch(error){
-
-console.error(error);
-
-}finally{
-
-setLoading(false);
-
+            <button type="submit" disabled={saving} style={styles.submit}>
+              <FaSave /> {saving ? 'Saving...' : 'Save Job'}
+            </button>
+          </form>
+        )}
+      </section>
+    </main>
+  );
 }
 
+const styles = {
+  container: { maxWidth: '800px', margin: '0 auto', padding: '30px' },
+  back: { display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '20px' },
+  card: { background: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,.08)' },
+  tabs: { display: 'flex', flexWrap: 'wrap', gap: '8px', margin: '20px 0' },
+  tab: { padding: '10px 16px', border: 0, borderRadius: '6px', background: '#e2e8f0', cursor: 'pointer' },
+  activeTab: { padding: '10px 16px', border: 0, borderRadius: '6px', background: '#0284c7', color: '#fff', cursor: 'pointer' },
+  label: { display: 'block', margin: '16px 0 8px', fontWeight: 600 },
+  input: { width: '100%', padding: '12px', border: '1px solid #cbd5e1', borderRadius: '6px' },
+  textarea: { width: '100%', padding: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', resize: 'vertical' },
+  submit: { display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '22px', padding: '11px 18px', border: 0, borderRadius: '6px', background: '#0284c7', color: '#fff', cursor: 'pointer' },
+  error: { color: '#b91c1c' },
+  notice: { color: '#166534' },
 };
 
-
-
-
-
-const deleteJob=async(id)=>{
-
-
-if(!window.confirm("Delete this job?"))
-return;
-
-
-try{
-
-await api.delete(`/jobs/${id}`);
-
-loadJobs();
-
-
-}catch(error){
-
-alert("Delete failed");
-
-}
-
-
-};
-
-
-
-
-
-if(loading)
-
-return <div style={styles.loading}>Loading...</div>;
-
-
-
-
-
-return(
-
-
-<div style={styles.container}>
-
-
-<div style={styles.topBar}>
-
-
-<Link to="/" style={styles.backButton}>
-
-<FaArrowLeft/>
-
-Back
-
-</Link>
-
-
-
-<Link to="/jobs/add" style={styles.addButton}>
-
-+ Add Job
-
-</Link>
-
-
-</div>
-
-
-
-
-
-<h1 style={styles.title}>
-
-<FaBriefcase/>
-
-My Jobs
-
-</h1>
-
-
-
-
-
-
-
-{
-
-jobs.length===0 ? (
-
-
-<div style={styles.empty}>
-
-No jobs added yet.
-
-</div>
-
-
-
-):(
-
-
-<div style={styles.grid}>
-
-
-{
-
-jobs.map(job=>(
-
-
-
-<div
-
-key={job.id}
-
-style={styles.card}
-
->
-
-
-
-<h3>
-
-{job.role}
-
-</h3>
-
-
-
-<p style={styles.company}>
-
-{job.company}
-
-</p>
-
-
-
-
-<p>
-
-Status:
-
-{" "}
-
-<span style={styles.status}>
-
-{job.status || "Applied"}
-
-</span>
-
-
-</p>
-
-
-
-
-<p style={styles.date}>
-
-Added:
-
-{" "}
-
-{new Date(job.created_at).toLocaleDateString()}
-
-</p>
-
-
-
-
-<div style={styles.actions}>
-
-
-<Link
-
-to={`/jobs/${job.id}`}
-
-style={styles.viewButton}
-
->
-
-
-<FaEye/>
-
-View Details
-
-
-</Link>
-
-
-
-
-
-<button
-
-onClick={()=>deleteJob(job.id)}
-
-style={styles.deleteButton}
-
->
-
-
-<FaTrash/>
-
-Delete
-
-
-</button>
-
-
-
-</div>
-
-
-
-
-</div>
-
-
-
-))
-
-}
-
-
-
-</div>
-
-
-)
-
-}
-
-
-
-</div>
-
-
-);
-
-
-}
-
-
-
-
-
-const styles={
-
-
-
-container:{
-
-padding:"30px",
-
-maxWidth:"1200px",
-
-margin:"0 auto"
-
-},
-
-
-
-topBar:{
-
-display:"flex",
-
-justifyContent:"space-between",
-
-marginBottom:"20px"
-
-},
-
-
-
-title:{
-
-display:"flex",
-
-alignItems:"center",
-
-gap:"10px",
-
-color:"#1a1a2e",
-
-marginBottom:"30px"
-
-},
-
-
-
-backButton:{
-
-display:"flex",
-
-alignItems:"center",
-
-gap:"8px",
-
-background:"#64748b",
-
-color:"white",
-
-padding:"8px 16px",
-
-borderRadius:"6px",
-
-textDecoration:"none"
-
-},
-
-
-
-addButton:{
-
-background:"#4fc3f7",
-
-color:"white",
-
-padding:"10px 18px",
-
-borderRadius:"6px",
-
-textDecoration:"none"
-
-},
-
-
-
-grid:{
-
-display:"grid",
-
-gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",
-
-gap:"20px"
-
-},
-
-
-
-card:{
-
-background:"white",
-
-padding:"25px",
-
-borderRadius:"10px",
-
-boxShadow:"0 2px 8px rgba(0,0,0,0.08)"
-
-},
-
-
-
-company:{
-
-color:"#666"
-
-},
-
-
-
-status:{
-
-background:"#fff3cd",
-
-color:"#856404",
-
-padding:"4px 12px",
-
-borderRadius:"15px",
-
-fontSize:"13px"
-
-},
-
-
-
-date:{
-
-color:"#999",
-
-fontSize:"13px"
-
-},
-
-
-
-actions:{
-
-display:"flex",
-
-gap:"10px",
-
-marginTop:"20px"
-
-},
-
-
-
-viewButton:{
-
-display:"flex",
-
-alignItems:"center",
-
-gap:"6px",
-
-background:"#4fc3f7",
-
-color:"white",
-
-padding:"8px 14px",
-
-borderRadius:"5px",
-
-textDecoration:"none"
-
-},
-
-
-
-deleteButton:{
-
-display:"flex",
-
-alignItems:"center",
-
-gap:"6px",
-
-background:"#ef5350",
-
-color:"white",
-
-border:"none",
-
-padding:"8px 14px",
-
-borderRadius:"5px",
-
-cursor:"pointer"
-
-},
-
-
-
-loading:{
-
-padding:"40px",
-
-textAlign:"center"
-
-},
-
-
-
-empty:{
-
-padding:"40px",
-
-background:"white",
-
-borderRadius:"10px",
-
-textAlign:"center"
-
-}
-
-
-};
-
-
-
-export default Jobs;
+export default AddJob;

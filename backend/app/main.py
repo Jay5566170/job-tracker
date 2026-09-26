@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth, jobs, resumes, applications, matches
 from app.database import engine, Base
+from app.config import FRONTEND_ORIGINS
 from app import models
-from fastapi.staticfiles import StaticFiles
 from app.routes import dashboard
 
 app = FastAPI(
@@ -11,12 +11,6 @@ app = FastAPI(
     description="Track job applications with AI-powered matching",
     version="1.0.0"
 )
-app.mount(
-    "/uploads",
-    StaticFiles(directory="uploads"),
-    name="uploads"
-)
-
 # CORS
 app.add_middleware(
     CORSMiddleware,
@@ -24,6 +18,7 @@ app.add_middleware(
         "http://localhost:5173",
         "http://localhost:5174",
         "https://job-tracker-jay5566170.vercel.app",
+        *FRONTEND_ORIGINS,
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -34,7 +29,7 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
-    print("✅ Database tables created/verified")
+    print("Database tables created/verified")
 
 
 # Include routers

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import api from "../services/api";
 import BackButton from "../components/BackButton";
 
@@ -20,33 +20,28 @@ const [resumes,setResumes]=useState([]);
 const [loading,setLoading]=useState(true);
 
 const [uploading,setUploading]=useState(false);
+const [loadError,setLoadError]=useState("");
+const [preview,setPreview]=useState(null);
 
 const fileInputRef=useRef(null);
 
 
 
 
-useEffect(()=>{
-
-loadResumes();
-
-},[]);
-
-
-
-
-const loadResumes=async()=>{
+const loadResumes=useCallback(async()=>{
 
 try{
 
 const response=await api.get("/resumes/");
 
 setResumes(response.data);
+setLoadError("");
 
 
-}catch(error){
+}catch(requestError){
 
-console.error(error);
+console.error(requestError);
+setLoadError(requestError.response?.data?.detail || requestError.message || "Could not load resumes.");
 
 }finally{
 
@@ -54,7 +49,17 @@ setLoading(false);
 
 }
 
-};
+},[]);
+
+useEffect(()=>{
+void Promise.resolve().then(loadResumes);
+},[loadResumes]);
+
+useEffect(()=>()=> {
+if(preview?.url){
+URL.revokeObjectURL(preview.url);
+}
+},[preview]);
 
 
 
@@ -97,11 +102,7 @@ formData.append("file",file);
 try{
 
 
-await api.post("/resumes/upload",formData,{
-headers:{
-"Content-Type":"multipart/form-data"
-}
-});
+await api.post("/resumes/upload",formData);
 
 
 alert("Resume uploaded successfully");
@@ -151,7 +152,7 @@ await api.delete(`/resumes/${id}`);
 loadResumes();
 
 
-}catch(error){
+}catch{
 
 alert("Delete failed");
 
@@ -181,6 +182,38 @@ return [];
 
 };
 
+const openResume=async(resume)=>{
+  try{
+    const response=await api.get(`/resumes/${resume.id}/file`,{
+      responseType:"blob"
+    });
+    const fileUrl=URL.createObjectURL(response.data);
+    setPreview({url:fileUrl,filename:resume.filename});
+  }catch(error){
+    console.error(error);
+    alert(error.response?.data?.detail || error.message || "Could not open the resume.");
+  }
+};
+
+const downloadResume=async(resume)=>{
+  try{
+    const response=await api.get(`/resumes/${resume.id}/file`,{
+      responseType:"blob"
+    });
+    const fileUrl=URL.createObjectURL(response.data);
+    const link=document.createElement("a");
+    link.href=fileUrl;
+    link.download=resume.filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(fileUrl),1000);
+  }catch(error){
+    console.error(error);
+    alert(error.response?.data?.detail || error.message || "Could not download the resume.");
+  }
+};
+
 
 
 
@@ -195,7 +228,7 @@ return <div style={styles.loading}>Loading...</div>;
 
 return(
 
-
+<>
 <div style={styles.container}>
 
 
@@ -211,6 +244,8 @@ return(
 My Resumes
 
 </h1>
+
+{loadError && <p role="alert" style={{color:"#b91c1c"}}>{loadError}</p>}
 
 
 
@@ -367,43 +402,33 @@ style={styles.skill}
 <div style={styles.actions}>
 
 
-<a
-
-href={`http://127.0.0.1:8000/${resume.file_path}`}
-
-target="_blank"
-
-rel="noopener noreferrer"
-
+<button
+type="button"
+onClick={()=>openResume(resume)}
 style={styles.view}
-
 >
 
 <FaEye/>
 
 View
 
-</a>
+</button>
 
 
 
 
 
-<a
-
-href={`http://127.0.0.1:8000/${resume.file_path}`}
-
-download
-
+<button
+type="button"
+onClick={()=>downloadResume(resume)}
 style={styles.download}
-
 >
 
 <FaDownload/>
 
 Download
 
-</a>
+</button>
 
 
 
@@ -447,6 +472,24 @@ Delete
 
 </div>
 
+{preview && (
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-label={`Resume preview: ${preview.filename}`}
+    style={styles.previewOverlay}
+    onClick={(event)=>event.target===event.currentTarget && setPreview(null)}
+  >
+    <section style={styles.previewDialog}>
+      <div style={styles.previewHeader}>
+        <h2>{preview.filename}</h2>
+        <button type="button" onClick={()=>setPreview(null)} style={styles.closePreview}>Close</button>
+      </div>
+      <iframe title={`Resume preview: ${preview.filename}`} src={preview.url} style={styles.previewFrame}/>
+    </section>
+  </div>
+)}
+</>
 
 );
 
@@ -655,8 +698,9 @@ padding:"8px 14px",
 
 borderRadius:"5px",
 
-textDecoration:"none"
-
+textDecoration:"none",
+border:"none",
+cursor:"pointer"
 },
 
 
@@ -677,8 +721,9 @@ padding:"8px 14px",
 
 borderRadius:"5px",
 
-textDecoration:"none"
-
+textDecoration:"none",
+border:"none",
+cursor:"pointer"
 },
 
 
@@ -713,6 +758,51 @@ padding:"40px",
 
 textAlign:"center"
 
+},
+
+previewOverlay:{
+  position:"fixed",
+  inset:0,
+  zIndex:1000,
+  display:"flex",
+  justifyContent:"center",
+  alignItems:"center",
+  padding:"20px",
+  background:"rgba(15,23,42,.7)"
+},
+
+previewDialog:{
+  display:"flex",
+  flexDirection:"column",
+  width:"min(100%, 1000px)",
+  height:"min(90vh, 900px)",
+  background:"#fff",
+  borderRadius:"10px",
+  padding:"16px"
+},
+
+previewHeader:{
+  display:"flex",
+  justifyContent:"space-between",
+  alignItems:"center",
+  gap:"12px",
+  marginBottom:"12px"
+},
+
+closePreview:{
+  padding:"8px 14px",
+  border:0,
+  borderRadius:"6px",
+  background:"#334155",
+  color:"#fff",
+  cursor:"pointer"
+},
+
+previewFrame:{
+  flex:1,
+  width:"100%",
+  border:"1px solid #cbd5e1",
+  borderRadius:"6px"
 }
 
 

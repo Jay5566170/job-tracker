@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -16,9 +16,9 @@ function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/');
-    } catch (err) {
-      setError('Invalid email or password');
+      navigate('/dashboard');
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || requestError.message || 'Login failed');
     } finally {
       setLoading(false);
     }

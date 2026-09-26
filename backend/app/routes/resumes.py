@@ -1,6 +1,8 @@
 # app/routes/resumes.py
 
-from fastapi import APIRouter, Depends, UploadFile, File, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
+from pathlib import Path
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -11,6 +13,7 @@ from app.services.resume_service import (
     get_resume_by_id,
     upload_resume,
     delete_resume,
+    get_resume_file_path,
 )
 from app.dependencies import get_current_user
 from app.models import User
@@ -46,6 +49,31 @@ def get_one_resume(
 ):
     """Get a specific resume."""
     return get_resume_by_id(db, resume_id, current_user.id)
+
+
+@router.get("/{resume_id}/file")
+def download_resume_file(
+    resume_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Serve a resume only to its owner."""
+    resume = get_resume_by_id(db, resume_id, current_user.id)
+    file_path = get_resume_file_path(resume).resolve()
+    upload_root = Path(get_resume_file_path(resume).parent).resolve()
+    if file_path.parent != upload_root:
+        raise HTTPException(status_code=400, detail="Invalid resume file path")
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Resume file not found")
+
+    media_type = "application/pdf" if file_path.suffix.lower() == ".pdf" else "text/plain"
+    return FileResponse(
+        path=file_path,
+        media_type=media_type,
+        filename=resume.filename,
+        content_disposition_type="inline",
+        headers={"Cache-Control": "private, no-store"},
+    )
 
 
 @router.delete("/{resume_id}")

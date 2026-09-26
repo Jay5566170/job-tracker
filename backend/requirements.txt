@@ -9,5 +9,5 @@ passlib[bcrypt]
 python-multipart
 requests
 beautifulsoup4
-google-generativeai
+google-genai
 PyPDF2

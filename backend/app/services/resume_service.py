@@ -1,9 +1,9 @@
 # app/services/resume_service.py
 
-import os
-import shutil
 import json
-from datetime import datetime
+import shutil
+from pathlib import Path
+from uuid import uuid4
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, UploadFile, status
 
@@ -12,8 +12,14 @@ from app.utils.pdf_parser import extract_text
 from app.services.ai_service import extract_resume_data
 
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+UPLOAD_DIR = BACKEND_DIR / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def get_resume_file_path(resume: Resume) -> Path:
+    stored_path = str(resume.file_path).replace("\\", "/")
+    return UPLOAD_DIR / Path(stored_path).name
 
 
 def get_user_resumes(db: Session, user_id: int):
@@ -40,38 +46,37 @@ def get_resume_by_id(db: Session, resume_id: int, user_id: int):
 def upload_resume(db: Session, file: UploadFile, user_id: int):
     """Upload, save, and analyze a resume."""
     # Validate file type
-    if not file.filename.lower().endswith(('.pdf', '.txt')):
+    original_filename = Path((file.filename or "").replace("\\", "/")).name
+    if not original_filename.lower().endswith((".pdf", ".txt")):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only PDF and TXT files allowed"
         )
     
-    # Save file to disk
-    timestamp = int(datetime.now().timestamp())
-    file_path = os.path.join(UPLOAD_DIR, f"{timestamp}_{file.filename}")
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    
-    # Extract text
-    text = extract_text(file_path)
-    
-    # Extract structured data with AI
-    ai_data = extract_resume_data(text)
-    skills_json = json.dumps(ai_data.get("skills", []))
-    
-    # Create DB record
-    new_resume = Resume(
-        user_id=user_id,
-        filename=file.filename,
-        file_path=file_path,
-        skills=skills_json
-    )
-    
-    db.add(new_resume)
-    db.commit()
-    db.refresh(new_resume)
-    
-    return new_resume
+    stored_filename = f"{uuid4().hex}_{original_filename}"
+    file_path = UPLOAD_DIR / stored_filename
+    try:
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        text = extract_text(str(file_path))
+        ai_data = extract_resume_data(text)
+        skills_json = json.dumps(ai_data.get("skills", []))
+
+        new_resume = Resume(
+            user_id=user_id,
+            filename=original_filename,
+            file_path=stored_filename,
+            skills=skills_json,
+        )
+        db.add(new_resume)
+        db.commit()
+        db.refresh(new_resume)
+        return new_resume
+    except Exception:
+        db.rollback()
+        file_path.unlink(missing_ok=True)
+        raise
 
 
 def delete_resume(db: Session, resume_id: int, user_id: int):
@@ -79,8 +84,7 @@ def delete_resume(db: Session, resume_id: int, user_id: int):
     resume = get_resume_by_id(db, resume_id, user_id)
     
     # Delete file from disk
-    if os.path.exists(resume.file_path):
-        os.remove(resume.file_path)
+    get_resume_file_path(resume).unlink(missing_ok=True)
     
     db.delete(resume)
     db.commit()

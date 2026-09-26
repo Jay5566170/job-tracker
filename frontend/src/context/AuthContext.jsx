@@ -1,43 +1,43 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-
-const AuthContext = createContext();
+import AuthContext from './authContext';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('token')));
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetchCurrentUser();
-    } else {
+  const fetchCurrentUser = useCallback(async ({ throwOnError = false } = {}) => {
+    try {
+      const response = await api.get('/auth/me');
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      localStorage.removeItem('token');
+      setUser(null);
+      if (throwOnError) {
+        throw error;
+      }
+      return null;
+    } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchCurrentUser = async () => {
-    try {
-      const response = await api.get('/auth/me');
-      setUser(response.data);
-    } catch (error) {
-      localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (localStorage.getItem('token')) {
+      void Promise.resolve().then(fetchCurrentUser);
     }
-  };
+  }, [fetchCurrentUser]);
 
   const login = async (email, password) => {
     const formData = new FormData();
     formData.append('username', email);
     formData.append('password', password);
 
-    const response = await api.post('/auth/login', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await api.post('/auth/login', formData);
 
     localStorage.setItem('token', response.data.access_token);
-    await fetchCurrentUser();
+    await fetchCurrentUser({ throwOnError: true });
     return response.data;
   };
 
@@ -56,8 +56,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

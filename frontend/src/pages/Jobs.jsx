@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { FaBriefcase, FaTrash, FaEye, FaArrowLeft } from "react-icons/fa";
 import api from "../services/api";
@@ -7,24 +7,26 @@ import api from "../services/api";
 function Jobs() {
 
   const [jobs, setJobs] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
 
-  useEffect(() => {
-    loadJobs();
-  }, []);
-
-
-  const loadJobs = async () => {
+  const loadJobs = useCallback(async () => {
 
     try {
 
-      const response = await api.get("/jobs/");
-      setJobs(response.data);
+      const [jobsResponse, applicationsResponse] = await Promise.all([
+        api.get("/jobs/"),
+        api.get("/applications/"),
+      ]);
+      setJobs(jobsResponse.data);
+      setApplications(applicationsResponse.data);
 
-    } catch(error) {
+    } catch(requestError) {
 
-      console.error("Error loading jobs:", error);
+      console.error("Error loading jobs:", requestError);
+      setError(requestError.response?.data?.detail || requestError.message || "Could not load jobs.");
 
     } finally {
 
@@ -32,7 +34,11 @@ function Jobs() {
 
     }
 
-  };
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(loadJobs);
+  }, [loadJobs]);
 
 
 
@@ -46,9 +52,9 @@ function Jobs() {
       await api.delete(`/jobs/${id}`);
       loadJobs();
 
-    }catch(error){
+    }catch(requestError){
 
-      alert("Delete failed");
+      setError(requestError.response?.data?.detail || requestError.message || "Delete failed");
 
     }
 
@@ -90,6 +96,7 @@ function Jobs() {
         My Jobs
       </h1>
 
+      {error && <p role="alert" style={styles.error}>{error}</p>}
 
 
 
@@ -130,7 +137,7 @@ function Jobs() {
                   Status:
                   {" "}
                   <span style={styles.status}>
-                    {job.status || "Applied"}
+                    {applications.find((application) => application.job_id === job.id)?.status || "Not tracked"}
                   </span>
                 </p>
 
@@ -322,8 +329,11 @@ empty:{
  padding:"40px",
  borderRadius:"10px",
  textAlign:"center"
+},
+error:{
+  color:"#b91c1c",
+  marginBottom:"16px"
 }
-
 
 };
 

@@ -1,6 +1,6 @@
 # app/routes/jobs.py
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -58,13 +58,11 @@ def delete_one_job(
     """Delete a job."""
     return delete_job(db, job_id, current_user.id)
 
-# Add these imports at top
-from app.schemas import JobCreate, JobResponse, ParseURLRequest, ParseTextRequest, ParsedJob
+from app.schemas import ParseURLRequest, ParseTextRequest, ParsedJob
 from app.utils.url_fetcher import fetch_url_content
 from app.services.ai_service import parse_job_description
 
 
-# Add these endpoints at bottom
 @router.post("/parse-url", response_model=ParsedJob)
 def parse_job_from_url(
     data: ParseURLRequest,

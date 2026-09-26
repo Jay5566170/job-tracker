@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -30,18 +30,7 @@ const [saving,setSaving]=useState(false);
 
 
 
-useEffect(()=>{
-
-loadJob();
-loadApplication();
-
-},[id]);
-
-
-
-
-
-const loadJob=async()=>{
+const loadJob=useCallback(async()=>{
 
 try{
 
@@ -63,14 +52,14 @@ setLoading(false);
 
 }
 
-};
+},[id,navigate]);
 
 
 
 
 
 
-const loadApplication=async()=>{
+const loadApplication=useCallback(async()=>{
 
 try{
 
@@ -100,7 +89,14 @@ console.error(error);
 
 }
 
-};
+},[id]);
+
+useEffect(()=>{
+void Promise.resolve().then(()=>{
+loadJob();
+loadApplication();
+});
+},[loadApplication,loadJob]);
 
 
 
@@ -197,7 +193,7 @@ await api.delete(`/jobs/${id}`);
 navigate("/jobs");
 
 
-}catch(error){
+}catch{
 
 alert("Delete failed");
 

@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
 import api from "../services/api";
 
@@ -7,7 +6,6 @@ import {
   FaBriefcase,
   FaFileAlt,
   FaBullseye,
-  FaCheckCircle,
   FaClock,
   FaTimesCircle,
   FaGift
@@ -15,9 +13,6 @@ import {
 
 
 function Dashboard(){
-
-const {user}=useAuth();
-
 
 const [stats,setStats]=useState({
 
@@ -29,6 +24,7 @@ offer:0,
 rejected:0
 
 });
+const [error,setError]=useState("");
 
 
 
@@ -51,6 +47,7 @@ console.error(
 "Dashboard stats error",
 error
 );
+setError(error.response?.data?.detail || error.message || "Could not load dashboard statistics.");
 
 }
 
@@ -85,6 +82,8 @@ Your Job Search Overview
 Track applications, manage resumes and find opportunities with AI.
 
 </p>
+
+{error && <p role="alert" style={{color:"#b91c1c"}}>{error}</p>}
 
 
 
@@ -125,6 +124,11 @@ title="Interviews"
 value={stats.interview}
 />
 
+<StatCard
+icon={<FaClock/>}
+title="Technical Interviews"
+value={stats.technical}
+/>
 
 
 

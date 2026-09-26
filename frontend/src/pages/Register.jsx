@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 function Register() {
   const [email, setEmail] = useState('');
@@ -18,8 +18,8 @@ function Register() {
       await register(email, password);
       alert('Registration successful! Please login.');
       navigate('/login');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed');
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || requestError.message || 'Registration failed');
     } finally {
       setLoading(false);
     }

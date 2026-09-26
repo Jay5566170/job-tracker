@@ -1,20 +1,26 @@
 # app/services/ai_service.py
 
-import os
 import json
 from app.config import GEMINI_API_KEY
 
-# Configure Gemini (if using google-generativeai)
+# Configure the Gemini client when a key is available.
 try:
-    import google.generativeai as genai
+    from google import genai
+
     if GEMINI_API_KEY:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('models/gemini-3.6-flash')
+        client = genai.Client(api_key=GEMINI_API_KEY)
     else:
-        model = None
+        client = None
 except Exception as e:
     print(f"Gemini setup error: {e}")
-    model = None
+    client = None
+
+
+def _generate_content(prompt: str):
+    return client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt,
+    )
 
 
 def extract_resume_data(text: str) -> dict:
@@ -23,7 +29,7 @@ def extract_resume_data(text: str) -> dict:
     if not text or len(text.strip()) < 50:
         return {"skills": [], "summary": None, "error": "Text too short"}
     
-    if model is None:
+    if client is None:
         # Fallback: simple extraction if AI unavailable
         return {
             "skills": [],
@@ -43,7 +49,7 @@ def extract_resume_data(text: str) -> dict:
     """
     
     try:
-        response = model.generate_content(prompt)
+        response = _generate_content(prompt)
         result_text = response.text.strip()
         
         # Clean markdown if present
@@ -77,7 +83,7 @@ def match_resume_to_job(resume_skills: str, job_description: str) -> dict:
             "recommendation": "Not enough data to match."
         }
 
-    if model is None:
+    if client is None:
         return {
             "match_score": 0,
             "matching_skills": [],
@@ -102,7 +108,7 @@ def match_resume_to_job(resume_skills: str, job_description: str) -> dict:
     """
 
     try:
-        response = model.generate_content(prompt)
+        response = _generate_content(prompt)
         result_text = response.text.strip()
 
         # Clean markdown
@@ -138,7 +144,7 @@ def parse_job_description(text: str) -> dict:
             "error": "Text too short"
         }
 
-    if model is None:
+    if client is None:
         return {
             "company": None,
             "role": None,
@@ -159,7 +165,7 @@ def parse_job_description(text: str) -> dict:
     """
 
     try:
-        response = model.generate_content(prompt)
+        response = _generate_content(prompt)
         result_text = response.text.strip()
 
         # Clean markdown

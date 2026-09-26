@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../context/useAuth";
 import { useState } from "react";
 import { FaBriefcase } from "react-icons/fa";
 
@@ -109,8 +109,14 @@ Logout
 </>
 
 )
-
 }
+
+{!user && (
+  <div style={styles.authLinks}>
+    <Link to="/login" style={styles.item}>Login</Link>
+    <Link to="/register" style={styles.item}>Register</Link>
+  </div>
+)}
 
 
 </div>
@@ -169,9 +175,12 @@ fontWeight:"bold"
 
 
 right:{
-
 position:"relative"
+},
 
+authLinks:{
+display:"flex",
+gap:"12px"
 },
 
 
