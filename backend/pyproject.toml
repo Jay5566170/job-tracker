@@ -1,0 +1,23 @@
+[project]
+name = "job-tracker-api"
+version = "1.0.0"
+description = "FastAPI backend for Job Tracker AI"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi[standard]",
+    "uvicorn",
+    "sqlalchemy",
+    "psycopg2-binary",
+    "python-dotenv",
+    "pydantic",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "python-multipart",
+    "requests",
+    "beautifulsoup4",
+    "google-genai",
+    "PyPDF2",
+]
+
+[tool.uv]
+package = false
