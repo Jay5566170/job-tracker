@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -18,58 +19,30 @@ def get_dashboard_stats(
     current_user: User = Depends(get_current_user),
 ):
 
-    total = db.query(Job).filter(Job.user_id == current_user.id).count()
-
-    applied = (
-        db.query(Application)
+    total_jobs = db.query(Job).filter(Job.user_id == current_user.id).count()
+    counts = (
+        db.query(
+            func.count(Application.id),
+            func.sum(case((Application.status == "applied", 1), else_=0)),
+            func.sum(case((Application.status == "interview", 1), else_=0)),
+            func.sum(case((Application.status == "technical", 1), else_=0)),
+            func.sum(case((Application.status == "offer", 1), else_=0)),
+            func.sum(case((Application.status == "rejected", 1), else_=0)),
+        )
+        .join(Job, Application.job_id == Job.id)
         .filter(
             Application.user_id == current_user.id,
-            Application.status == "applied",
+            Job.user_id == current_user.id,
         )
-        .count()
-    )
-
-    interview = (
-        db.query(Application)
-        .filter(
-            Application.user_id == current_user.id,
-            Application.status == "interview",
-        )
-        .count()
-    )
-
-    technical = (
-        db.query(Application)
-        .filter(
-            Application.user_id == current_user.id,
-            Application.status == "technical",
-        )
-        .count()
-    )
-
-    offer = (
-        db.query(Application)
-        .filter(
-            Application.user_id == current_user.id,
-            Application.status == "offer",
-        )
-        .count()
-    )
-
-    rejected = (
-        db.query(Application)
-        .filter(
-            Application.user_id == current_user.id,
-            Application.status == "rejected",
-        )
-        .count()
+        .one()
     )
 
     return {
-        "total": total,
-        "applied": applied,
-        "interview": interview,
-        "technical": technical,
-        "offer": offer,
-        "rejected": rejected
+        "total": total_jobs,
+        "applications": counts[0],
+        "applied": counts[1] or 0,
+        "interview": counts[2] or 0,
+        "technical": counts[3] or 0,
+        "offer": counts[4] or 0,
+        "rejected": counts[5] or 0,
     }

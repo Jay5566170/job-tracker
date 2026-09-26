@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import auth, jobs, resumes, applications, matches
-from app.database import engine, Base
+from app.database import engine, Base, ensure_schema_compatibility
 from app.config import FRONTEND_ORIGINS
 from app import models
 from app.routes import dashboard
@@ -29,6 +29,7 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    ensure_schema_compatibility()
     print("Database tables created/verified")
 
 

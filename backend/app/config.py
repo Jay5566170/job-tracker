@@ -17,6 +17,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # ============ AI SERVICES ============
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip()
 FRONTEND_ORIGINS = [
     origin.strip()
     for origin in os.getenv("FRONTEND_ORIGINS", "").split(",")

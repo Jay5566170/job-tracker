@@ -8,6 +8,9 @@ function AddJob() {
   const [mode, setMode] = useState('manual');
   const [company, setCompany] = useState('');
   const [role, setRole] = useState('');
+  const [location, setLocation] = useState('');
+  const [skills, setSkills] = useState('');
+  const [requirements, setRequirements] = useState('');
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
   const [parseUrl, setParseUrl] = useState('');
@@ -36,6 +39,9 @@ function AddJob() {
         role: trimmedRole,
         url: url.trim() || null,
         description: description.trim() || null,
+        location: location.trim() || null,
+        skills: JSON.stringify(skills.split(',').map((item) => item.trim()).filter(Boolean)),
+        requirements: JSON.stringify(requirements.split('\n').map((item) => item.trim()).filter(Boolean)),
       });
       navigate(`/jobs/${response.data.id}`);
     } catch (requestError) {
@@ -53,6 +59,9 @@ function AddJob() {
       const response = await api.post(endpoint, payload);
       setCompany(response.data.company || '');
       setRole(response.data.role || '');
+      setLocation(response.data.location || '');
+      setSkills(Array.isArray(response.data.skills) ? response.data.skills.join(', ') : '');
+      setRequirements(Array.isArray(response.data.requirements) ? response.data.requirements.join('\n') : '');
       setUrl(response.data.url || sourceUrl);
       setDescription(response.data.description || '');
       setMode('manual');
@@ -145,6 +154,35 @@ function AddJob() {
               maxLength={100}
               required
               style={styles.input}
+            />
+
+            <label style={styles.label} htmlFor="location">Location</label>
+            <input
+              id="location"
+              name="location"
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+              maxLength={255}
+              style={styles.input}
+            />
+
+            <label style={styles.label} htmlFor="skills">Skills (comma-separated)</label>
+            <input
+              id="skills"
+              name="skills"
+              value={skills}
+              onChange={(event) => setSkills(event.target.value)}
+              style={styles.input}
+            />
+
+            <label style={styles.label} htmlFor="requirements">Requirements (one per line)</label>
+            <textarea
+              id="requirements"
+              name="requirements"
+              value={requirements}
+              onChange={(event) => setRequirements(event.target.value)}
+              rows={4}
+              style={styles.textarea}
             />
 
             <label style={styles.label} htmlFor="url">Job posting URL</label>

@@ -1,6 +1,6 @@
 # app/database.py
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import DATABASE_URL, validate_settings
@@ -25,3 +25,28 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def ensure_schema_compatibility():
+    """Add nullable columns introduced after the initial create_all schema."""
+    additions = {
+        "jobs": {
+            "location": "VARCHAR(255)",
+            "skills": "TEXT",
+            "requirements": "TEXT",
+        },
+        "resumes": {
+            "extraction_error": "TEXT",
+        },
+    }
+    inspector = inspect(engine)
+    with engine.begin() as connection:
+        for table, columns in additions.items():
+            if not inspector.has_table(table):
+                continue
+            existing = {column["name"] for column in inspector.get_columns(table)}
+            for column, sql_type in columns.items():
+                if column not in existing:
+                    connection.execute(
+                        text(f'ALTER TABLE "{table}" ADD COLUMN "{column}" {sql_type}')
+                    )

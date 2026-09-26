@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import { useAuth } from "../context/useAuth";
 
 import {
   FaBriefcase,
@@ -13,56 +14,37 @@ import {
 
 
 function Dashboard(){
-
-const [stats,setStats]=useState({
-
-total:0,
-applied:0,
-interview:0,
-technical:0,
-offer:0,
-rejected:0
-
-});
-const [error,setError]=useState("");
-
-
-
+const { user } = useAuth();
+const [statsState,setStatsState]=useState({requestId:null,data:null});
+const [errorState,setErrorState]=useState({requestId:null,message:""});
+const [retryCount,setRetryCount]=useState(0);
+const requestId=`${user?.id ?? "anonymous"}:${retryCount}`;
+const stats=statsState.requestId===requestId ? statsState.data : null;
+const error=errorState.requestId===requestId ? errorState.message : "";
 
 useEffect(()=>{
-
-
-const loadStats=async()=>{
-
-try{
-
-const response=await api.get("/dashboard/stats");
-
-setStats(response.data);
-
-
-}catch(error){
-
-console.error(
-"Dashboard stats error",
-error
-);
-setError(error.response?.data?.detail || error.message || "Could not load dashboard statistics.");
-
-}
-
-
+let active = true;
+api.get("/dashboard/stats")
+  .then((response) => {
+    if (active) setStatsState({requestId,data:response.data});
+  })
+  .catch((requestError) => {
+    console.error("Dashboard stats error", requestError);
+    if (active) {
+      setErrorState({
+        requestId,
+        message:requestError.response?.data?.detail || requestError.message || "Could not load dashboard statistics.",
+      });
+    }
+  });
+return () => {
+  active = false;
 };
+},[user?.id,retryCount,requestId]);
 
-
-loadStats();
-
-
-},[]);
-
-
-
-
+if (!stats && !error) {
+  return <div role="status" style={styles.container}>Loading dashboard...</div>;
+}
 
 
 return(
@@ -83,7 +65,10 @@ Track applications, manage resumes and find opportunities with AI.
 
 </p>
 
-{error && <p role="alert" style={{color:"#b91c1c"}}>{error}</p>}
+{error && <div role="alert" style={{color:"#b91c1c", marginBottom:"20px"}}>
+  <p>{error}</p>
+  <button type="button" onClick={() => setRetryCount((count) => count + 1)}>Retry</button>
+</div>}
 
 
 
@@ -104,15 +89,20 @@ Application Overview
 <StatCard
 icon={<FaBriefcase/>}
 title="Total Jobs"
-value={stats.total}
+value={stats?.total ?? "—"}
 />
 
+<StatCard
+icon={<FaFileAlt/>}
+title="Applications"
+value={stats?.applications ?? "—"}
+/>
 
 
 <StatCard
 icon={<FaClock/>}
 title="Applied"
-value={stats.applied}
+value={stats?.applied ?? "—"}
 />
 
 
@@ -121,13 +111,13 @@ value={stats.applied}
 <StatCard
 icon={<FaClock/>}
 title="Interviews"
-value={stats.interview}
+value={stats?.interview ?? "—"}
 />
 
 <StatCard
 icon={<FaClock/>}
 title="Technical Interviews"
-value={stats.technical}
+value={stats?.technical ?? "—"}
 />
 
 
@@ -135,7 +125,7 @@ value={stats.technical}
 <StatCard
 icon={<FaGift/>}
 title="Offers"
-value={stats.offer}
+value={stats?.offer ?? "—"}
 type="success"
 />
 
@@ -145,7 +135,7 @@ type="success"
 <StatCard
 icon={<FaTimesCircle/>}
 title="Rejected"
-value={stats.rejected}
+value={stats?.rejected ?? "—"}
 type="danger"
 />
 
@@ -179,7 +169,7 @@ icon={<FaBriefcase/>}
 
 title="My Jobs"
 
-text={`${stats.total} jobs tracked`}
+text={`${stats?.total ?? "—"} jobs tracked`}
 
 />
 

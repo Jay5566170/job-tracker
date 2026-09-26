@@ -36,7 +36,18 @@ def match_resume_to_job_service(db: Session, resume_id: int, job_id: int, user_i
     resume_skills = resume.skills or "[]"
     
     # Get job description
-    job_description = job.description or ""
+    job_description = "\n".join(
+        value
+        for value in (
+            job.role,
+            job.company,
+            job.location or "",
+            job.description or "",
+            f"Skills: {job.skills}" if job.skills else "",
+            f"Requirements: {job.requirements}" if job.requirements else "",
+        )
+        if value
+    )
     
     # Match using AI
     match_result = match_resume_to_job(resume_skills, job_description)

@@ -68,7 +68,7 @@ URL.revokeObjectURL(preview.url);
 const handleUpload=async(e)=>{
 
 
-const file=e.target.files[0];
+const file=e.target.files?.[0];
 
 
 if(!file)
@@ -102,16 +102,16 @@ formData.append("file",file);
 try{
 
 
-await api.post("/resumes/upload",formData);
-
-
-alert("Resume uploaded successfully");
+const response=await api.post("/resumes/upload",formData);
 
 
 fileInputRef.current.value="";
 
 
-loadResumes();
+await loadResumes();
+alert(response.data.extraction_error
+  ? `Resume uploaded, but skills could not be extracted: ${response.data.extraction_error}`
+  : "Resume uploaded and skills extracted successfully");
 
 
 
@@ -393,8 +393,11 @@ style={styles.skill}
 
 </div>
 
-
-
+{resume.extraction_error && (
+  <p role="status" style={{color:"#92400e",fontSize:"13px"}}>
+    Skills are unavailable: {resume.extraction_error}
+  </p>
+)}
 
 
 

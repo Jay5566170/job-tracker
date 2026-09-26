@@ -34,7 +34,10 @@ def create_job(db: Session, job_data: JobCreate, user_id: int):
         company=job_data.company,
         role=job_data.role,
         url=job_data.url,
-        description=job_data.description
+        description=job_data.description,
+        location=job_data.location,
+        skills=job_data.skills,
+        requirements=job_data.requirements,
     )
     
     db.add(new_job)

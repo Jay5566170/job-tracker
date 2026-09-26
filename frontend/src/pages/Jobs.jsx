@@ -131,6 +131,8 @@ function Jobs() {
                   {job.company}
                 </p>
 
+                {job.location && <p style={styles.company}>{job.location}</p>}
+
 
 
                 <p>

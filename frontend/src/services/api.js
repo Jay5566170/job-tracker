@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+export const AUTH_INVALIDATED_EVENT = 'jobtracker:auth-invalidated';
+
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
 let API_BASE_URL = null;
 let API_CONFIG_ERROR = null;
@@ -37,6 +39,25 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const sentAuthorization =
+      error.config?.headers?.get?.('Authorization') ??
+      error.config?.headers?.Authorization;
+    const currentToken = localStorage.getItem('token');
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.endsWith('/auth/login') &&
+      sentAuthorization &&
+      sentAuthorization === `Bearer ${currentToken}`
+    ) {
+      window.dispatchEvent(new Event(AUTH_INVALIDATED_EVENT));
+    }
+    return Promise.reject(error);
+  },
+);
 
 export { API_CONFIG_ERROR };
 export default api;

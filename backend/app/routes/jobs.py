@@ -70,7 +70,7 @@ def parse_job_from_url(
 ):
     """Parse a job from a URL."""
     # Fetch content from URL
-    text = fetch_url_content(data.url)
+    text = fetch_url_content(str(data.url))
     if not text:
         raise HTTPException(
             status_code=400,
@@ -79,7 +79,7 @@ def parse_job_from_url(
     
     # Parse with AI
     parsed = parse_job_description(text)
-    parsed["url"] = data.url
+    parsed["url"] = str(data.url)
     return parsed
 
 

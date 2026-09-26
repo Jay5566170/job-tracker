@@ -4,10 +4,11 @@ import json
 import shutil
 from pathlib import Path
 from uuid import uuid4
+import logging
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, UploadFile, status
 
-from app.models import Resume
+from app.models import Application, Resume
 from app.utils.pdf_parser import extract_text
 from app.services.ai_service import extract_resume_data
 
@@ -15,6 +16,7 @@ from app.services.ai_service import extract_resume_data
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 UPLOAD_DIR = BACKEND_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger(__name__)
 
 
 def get_resume_file_path(resume: Resume) -> Path:
@@ -60,14 +62,20 @@ def upload_resume(db: Session, file: UploadFile, user_id: int):
             shutil.copyfileobj(file.file, buffer)
 
         text = extract_text(str(file_path))
-        ai_data = extract_resume_data(text)
-        skills_json = json.dumps(ai_data.get("skills", []))
+        extraction_error = None
+        try:
+            ai_data = extract_resume_data(text)
+            skills_json = json.dumps(ai_data["skills"])
+        except HTTPException as error:
+            skills_json = json.dumps([])
+            extraction_error = error.detail
 
         new_resume = Resume(
             user_id=user_id,
             filename=original_filename,
             file_path=stored_filename,
             skills=skills_json,
+            extraction_error=extraction_error,
         )
         db.add(new_resume)
         db.commit()
@@ -82,11 +90,19 @@ def upload_resume(db: Session, file: UploadFile, user_id: int):
 def delete_resume(db: Session, resume_id: int, user_id: int):
     """Delete a resume."""
     resume = get_resume_by_id(db, resume_id, user_id)
-    
-    # Delete file from disk
-    get_resume_file_path(resume).unlink(missing_ok=True)
-    
+    file_path = get_resume_file_path(resume)
+    db.query(Application).filter(
+        Application.user_id == user_id,
+        Application.resume_id == resume.id,
+    ).update({Application.resume_id: None}, synchronize_session=False)
     db.delete(resume)
     db.commit()
-    
+    try:
+        file_path.unlink(missing_ok=True)
+    except OSError:
+        logger.exception("Resume %s was deleted from the database but its file could not be removed.", resume_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Resume record was deleted, but its uploaded file could not be removed. Contact support.",
+        )
     return {"message": f"Resume {resume_id} deleted successfully"}

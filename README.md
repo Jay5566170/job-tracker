@@ -30,7 +30,7 @@ descriptions using Google Gemini.
 React + Vite (Vercel)
         │ HTTPS / JSON, multipart, bearer JWT
         ▼
-FastAPI (Railway or another ASGI host)
+FastAPI (FastAPI Cloud, Railway, or another ASGI host)
         ├── SQLAlchemy ── PostgreSQL
         ├── Google Gemini ── AI parsing and matching
         └── private uploads directory / persistent volume
@@ -112,6 +112,7 @@ Open the local Vite URL printed by the command (normally
 | `DATABASE_URL` | Yes | SQLAlchemy database URL, e.g. `postgresql://user:password@host:5432/database` |
 | `SECRET_KEY` | Yes | Long, random secret used to sign JWTs; keep private |
 | `GEMINI_API_KEY` | For AI | Google AI Studio/API credential |
+| `GEMINI_MODEL` | Optional | Gemini model available to the configured API key (default: `gemini-2.5-flash`) |
 | `FRONTEND_ORIGINS` | Optional | Comma-separated extra origins allowed by CORS |
 
 `http://localhost:5173` and the published Vercel application origin are already
@@ -140,17 +141,21 @@ variable is missing or invalid.
 6. Keep the SPA rewrite in `frontend/vercel.json` so direct navigation and page
    refreshes resolve through the React application.
 
-### Railway-compatible FastAPI backend
+### FastAPI backend
 
-1. Create a service from the repository and set **Root Directory** to `backend`.
-2. The checked-in `backend/railway.json` starts Uvicorn on the platform-provided
-   `$PORT`.
-3. Configure `DATABASE_URL`, `SECRET_KEY`, and `GEMINI_API_KEY` in the service
-   variables. Configure `FRONTEND_ORIGINS` if the frontend uses other origins.
+1. Deploy the `backend` directory as a Python ASGI service. The included
+   `backend/railway.json` and `backend/Procfile` are compatible with hosts that
+   use them; FastAPI Cloud and other providers may require their own deployment
+   command.
+2. Run `uvicorn app.main:app --host 0.0.0.0 --port $PORT` (or the host's
+   equivalent).
+3. Configure `DATABASE_URL`, `SECRET_KEY`, `GEMINI_API_KEY`, and optionally
+   `GEMINI_MODEL` in the service environment. Configure `FRONTEND_ORIGINS` for
+   any additional frontend domains.
 4. Attach a persistent volume mounted at the backend `uploads` directory. The
    SQL database stores resume metadata; uploaded files live on this volume and
    would otherwise be lost on an ephemeral filesystem restart.
-5. Verify `/health` and `/docs` on the deployed backend, then set the Vercel
+5. Verify `/health`, `/docs`, and the expected route schemas on the deployed backend, then set the Vercel
    `VITE_API_URL` and redeploy the frontend.
 
 For other hosting providers, run the ASGI app as
@@ -168,7 +173,7 @@ All data routes except registration and login require a bearer JWT.
 | `POST` | `/auth/login` | Obtain a bearer token (form-encoded credentials) |
 | `GET` | `/auth/me` | Get the authenticated user |
 | `GET` | `/dashboard/stats` | Get user-scoped dashboard totals |
-| `POST`, `GET` | `/jobs/` | Create or list the current user’s jobs |
+| `POST`, `GET` | `/jobs/` | Create or list the current user’s jobs, including location, skills, and requirements |
 | `GET`, `DELETE` | `/jobs/{job_id}` | Read or delete an owned job |
 | `POST` | `/jobs/parse-url` | Parse a job posting URL |
 | `POST` | `/jobs/parse-text` | Parse pasted job text |
@@ -181,6 +186,27 @@ All data routes except registration and login require a bearer JWT.
 | `POST` | `/matches/{resume_id}/{job_id}` | Compare an owned resume with an owned job |
 
 See the deployed `/docs` page for request and response schemas.
+
+### Data migrations and AI behavior
+
+The backend adds the nullable `jobs.location`, `jobs.skills`,
+`jobs.requirements`, and `resumes.extraction_error` columns at startup for
+existing installations. Back up the database before deploying schema changes.
+Resume file persistence remains the responsibility of the host's durable
+volume; the database migration does not move uploaded files.
+
+AI parsing, resume skill extraction, and matching require a valid Gemini API key
+with access to the configured model. Missing or rejected credentials produce an
+explicit service error. A resume upload is retained if extraction is temporarily
+unavailable and the response/list shows the extraction warning. Job text parsing
+works from pasted posting text; many job boards (including LinkedIn) block
+automated page retrieval, so URL parsing may require pasting the description.
+
+Run the isolated two-user API integration test from the `backend` directory:
+
+```powershell
+python -m unittest test_user_isolation_e2e
+```
 
 ## Screenshots
 

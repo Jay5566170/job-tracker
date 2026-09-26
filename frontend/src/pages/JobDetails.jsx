@@ -28,6 +28,15 @@ const [notes,setNotes]=useState("");
 const [loading,setLoading]=useState(true);
 const [saving,setSaving]=useState(false);
 
+const formatList = (value) => {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed.join(", ") : "";
+  } catch {
+    return value || "";
+  }
+};
+
 
 
 const loadJob=useCallback(async()=>{
@@ -285,8 +294,9 @@ Back
 <FaBuilding/>
 
 {job.company}
-
 </p>
+
+{job.location && <p style={styles.company}>{job.location}</p>}
 
 
 
@@ -337,6 +347,13 @@ View Job Posting
 {job.description || "No description available"}
 
 </p>
+
+{job.skills && formatList(job.skills) && (
+  <p><strong>Skills:</strong> {formatList(job.skills)}</p>
+)}
+{job.requirements && formatList(job.requirements) && (
+  <p><strong>Requirements:</strong> {formatList(job.requirements)}</p>
+)}
 
 
 </div>

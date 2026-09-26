@@ -8,15 +8,26 @@ from app.schemas import ApplicationCreate, ApplicationUpdate
 
 def get_user_applications(db: Session, user_id: int):
     """Get all applications for a user."""
-    return db.query(Application).filter(Application.user_id == user_id).all()
+    return (
+        db.query(Application)
+        .join(Job, Application.job_id == Job.id)
+        .filter(Application.user_id == user_id, Job.user_id == user_id)
+        .all()
+    )
 
 
 def get_application_by_id(db: Session, application_id: int, user_id: int):
     """Get a specific application (only if owned by user)."""
-    application = db.query(Application).filter(
-        Application.id == application_id,
-        Application.user_id == user_id
-    ).first()
+    application = (
+        db.query(Application)
+        .join(Job, Application.job_id == Job.id)
+        .filter(
+            Application.id == application_id,
+            Application.user_id == user_id,
+            Job.user_id == user_id,
+        )
+        .first()
+    )
     
     if not application:
         raise HTTPException(

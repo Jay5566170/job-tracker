@@ -28,6 +28,9 @@ class Job(Base):
     role = Column(String(100), nullable=False)
     url = Column(String(500), nullable=True)
     description = Column(Text, nullable=True)
+    location = Column(String(255), nullable=True)
+    skills = Column(Text, nullable=True)
+    requirements = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -43,6 +46,7 @@ class Resume(Base):
     filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     skills = Column(Text, nullable=True)
+    extraction_error = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
