@@ -407,30 +407,13 @@ Match Result
 
 
 <div style={styles.skills}>
-
-
-{
-
-result.matching_skills?.map((skill,index)=>(
-
-
-<span
-
-key={index}
-
-style={styles.good}
-
->
-
-{skill}
-
-</span>
-
-
-))
-
-
-}
+{result.matching_skills?.length ? (
+  result.matching_skills.map((skill,index)=>(
+    <span key={index} style={styles.good}>{skill}</span>
+  ))
+) : (
+  <p>No matching skills found</p>
+)}
 
 </div>
 
