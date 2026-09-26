@@ -71,6 +71,10 @@ class UserIsolationE2ETest(unittest.TestCase):
         )
         self.assertEqual(normalize_database_url("sqlite://"), "sqlite://")
 
+    def test_dashboard_stats_requires_authentication(self):
+        response = self.client.get("/dashboard/stats")
+        self.assertEqual(response.status_code, 401)
+
     def register_and_login(self, email):
         response = self.client.post(
             "/auth/register",
