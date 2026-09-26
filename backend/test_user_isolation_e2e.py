@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app import database, main
-from app.database import Base
+from app.database import Base, normalize_database_url
 from app.services import ai_service
 from app.utils.security import create_access_token
 from app.utils.url_fetcher import FetchedJobPage
@@ -59,6 +59,17 @@ class UserIsolationE2ETest(unittest.TestCase):
     def setUp(self):
         Base.metadata.drop_all(bind=self.test_engine)
         Base.metadata.create_all(bind=self.test_engine)
+
+    def test_database_url_uses_installed_postgres_driver(self):
+        self.assertEqual(
+            normalize_database_url("postgres://user:password@db.example/app"),
+            "postgresql://user:password@db.example/app",
+        )
+        self.assertEqual(
+            normalize_database_url("postgresql+psycopg://user:password@db.example/app"),
+            "postgresql+psycopg2://user:password@db.example/app",
+        )
+        self.assertEqual(normalize_database_url("sqlite://"), "sqlite://")
 
     def register_and_login(self, email):
         response = self.client.post(

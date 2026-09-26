@@ -5,11 +5,22 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.config import DATABASE_URL, validate_settings
 
+
+def normalize_database_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql://", 1)
+    if url.startswith("postgresql+psycopg://"):
+        return url.replace(
+            "postgresql+psycopg://",
+            "postgresql+psycopg2://",
+            1,
+        )
+    return url
+
+
 # ============ ENGINE ============
 validate_settings()
-database_url = DATABASE_URL
-if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
+database_url = normalize_database_url(DATABASE_URL)
 engine = create_engine(database_url, pool_pre_ping=True)
 
 # ============ SESSION FACTORY ============
