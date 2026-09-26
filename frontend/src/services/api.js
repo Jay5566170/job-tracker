@@ -47,11 +47,13 @@ api.interceptors.response.use(
       error.config?.headers?.get?.('Authorization') ??
       error.config?.headers?.Authorization;
     const currentToken = localStorage.getItem('token');
+    const requestMatchesSession = currentToken
+      ? sentAuthorization === `Bearer ${currentToken}`
+      : !sentAuthorization;
     if (
       error.response?.status === 401 &&
       !error.config?.url?.endsWith('/auth/login') &&
-      sentAuthorization &&
-      sentAuthorization === `Bearer ${currentToken}`
+      requestMatchesSession
     ) {
       window.dispatchEvent(new Event(AUTH_INVALIDATED_EVENT));
     }
