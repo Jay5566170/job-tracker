@@ -37,6 +37,7 @@ def ensure_schema_compatibility():
         },
         "resumes": {
             "extraction_error": "TEXT",
+            "summary": "TEXT",
         },
     }
     inspector = inspect(engine)

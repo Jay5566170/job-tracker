@@ -20,8 +20,8 @@ descriptions using Google Gemini.
 - Track each job application’s status and notes
 - Add jobs manually or prefill details from a job URL or pasted text
 - Upload, view, and download PDF and text resumes
-- Extract resume skills and request AI resume-to-job comparisons
-- See matching skills, missing skills, and recommendations
+- Extract resume summaries and skills and request AI resume-to-job comparisons
+- View match history, matching skills, missing skills, and recommendations
 - Per-user dashboard statistics and data isolation
 
 ## Architecture
@@ -52,7 +52,7 @@ public static directory.
 | Authentication | JWT, PBKDF2 password hashing |
 | AI | Google Gen AI SDK and Gemini |
 | Resume processing | PyPDF2, multipart uploads |
-| Deployment | Vercel frontend; Railway-compatible backend configuration |
+| Deployment | Vercel frontend; FastAPI ASGI backend |
 
 ## Local development
 
@@ -184,23 +184,29 @@ All data routes except registration and login require a bearer JWT.
 | `POST`, `GET` | `/applications/` | Create or list applications |
 | `GET`, `PUT`, `DELETE` | `/applications/{application_id}` | Read, update, or delete an owned application |
 | `POST` | `/matches/{resume_id}/{job_id}` | Compare an owned resume with an owned job |
+| `GET` | `/matches/` | List saved match results for the authenticated user |
 
 See the deployed `/docs` page for request and response schemas.
 
 ### Data migrations and AI behavior
 
 The backend adds the nullable `jobs.location`, `jobs.skills`,
-`jobs.requirements`, and `resumes.extraction_error` columns at startup for
-existing installations. Back up the database before deploying schema changes.
-Resume file persistence remains the responsibility of the host's durable
-volume; the database migration does not move uploaded files.
+`jobs.requirements`, `resumes.extraction_error`, and `resumes.summary` columns
+at startup for existing installations, and creates the per-user `matches`
+table. Back up the database before deploying schema changes. Resume file
+persistence remains the responsibility of the host's durable volume; the
+database migration does not move uploaded files. Uploads are limited to 10 MB.
+Scanned/image-only PDFs require OCR, which is not currently included.
 
 AI parsing, resume skill extraction, and matching require a valid Gemini API key
 with access to the configured model. Missing or rejected credentials produce an
 explicit service error. A resume upload is retained if extraction is temporarily
 unavailable and the response/list shows the extraction warning. Job text parsing
-works from pasted posting text; many job boards (including LinkedIn) block
-automated page retrieval, so URL parsing may require pasting the description.
+works from pasted posting text. Public job pages with Schema.org `JobPosting`
+JSON-LD can be parsed without an AI request. Other readable pages use Gemini to
+extract fields; dynamic or protected job boards (including many LinkedIn pages)
+may block automated access, so paste the job description when URL parsing
+reports that the content is unavailable or incomplete.
 
 Run the isolated two-user API integration test from the `backend` directory:
 

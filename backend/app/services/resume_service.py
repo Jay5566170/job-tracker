@@ -1,7 +1,6 @@
 # app/services/resume_service.py
 
 import json
-import shutil
 from pathlib import Path
 from uuid import uuid4
 import logging
@@ -58,8 +57,16 @@ def upload_resume(db: Session, file: UploadFile, user_id: int):
     stored_filename = f"{uuid4().hex}_{original_filename}"
     file_path = UPLOAD_DIR / stored_filename
     try:
+        total_bytes = 0
         with file_path.open("wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            while chunk := file.file.read(64 * 1024):
+                total_bytes += len(chunk)
+                if total_bytes > 10 * 1024 * 1024:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail="Resume files must be 10 MB or smaller.",
+                    )
+                buffer.write(chunk)
 
         text = extract_text(str(file_path))
         extraction_error = None
@@ -76,6 +83,7 @@ def upload_resume(db: Session, file: UploadFile, user_id: int):
             file_path=stored_filename,
             skills=skills_json,
             extraction_error=extraction_error,
+            summary=ai_data.get("summary") if extraction_error is None else None,
         )
         db.add(new_resume)
         db.commit()

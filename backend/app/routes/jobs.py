@@ -1,6 +1,7 @@
 # app/routes/jobs.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
+import logging
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
@@ -15,6 +16,7 @@ from app.dependencies import get_current_user
 from app.models import User
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
@@ -59,7 +61,7 @@ def delete_one_job(
     return delete_job(db, job_id, current_user.id)
 
 from app.schemas import ParseURLRequest, ParseTextRequest, ParsedJob
-from app.utils.url_fetcher import fetch_url_content
+from app.utils.url_fetcher import fetch_job_page
 from app.services.ai_service import parse_job_description
 
 
@@ -69,17 +71,20 @@ def parse_job_from_url(
     current_user: User = Depends(get_current_user)
 ):
     """Parse a job from a URL."""
+    logger.info("Parsing job posting URL host=%s", data.url.host)
     # Fetch content from URL
-    text = fetch_url_content(str(data.url))
-    if not text:
+    page = fetch_job_page(str(data.url))
+    if page.structured_job:
+        parsed = page.structured_job
+    elif len(page.text.strip()) >= 50:
+        parsed = parse_job_description(page.text)
+    else:
         raise HTTPException(
-            status_code=400,
-            detail="Could not fetch URL content"
+            status_code=422,
+            detail="The URL did not contain enough readable job text. Paste the job description instead.",
         )
-    
-    # Parse with AI
-    parsed = parse_job_description(text)
     parsed["url"] = str(data.url)
+    logger.info("Parsed job URL with company/title present: %s/%s", bool(parsed.get("company")), bool(parsed.get("title")))
     return parsed
 
 
@@ -89,5 +94,7 @@ def parse_job_from_text(
     current_user: User = Depends(get_current_user)
 ):
     """Parse a job from pasted text."""
+    logger.info("Parsing pasted job text (%d characters)", len(data.text))
     parsed = parse_job_description(data.text)
+    logger.info("Parsed pasted job text with company/title present: %s/%s", bool(parsed.get("company")), bool(parsed.get("title")))
     return parsed

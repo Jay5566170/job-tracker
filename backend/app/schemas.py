@@ -58,6 +58,7 @@ class ResumeResponse(BaseModel):
     file_path: str
     skills: Optional[str]
     extraction_error: Optional[str] = None
+    summary: Optional[str] = None
     created_at: datetime
     
     class Config:
@@ -99,6 +100,14 @@ class MatchResult(BaseModel):
     recommendation: str
 
 
+class MatchHistoryResponse(MatchResult):
+    id: int
+    user_id: int
+    resume_id: int
+    job_id: int
+    created_at: datetime
+
+
 # ============ PARSING SCHEMAS ============
 class ParseURLRequest(BaseModel):
     url: HttpUrl
@@ -110,6 +119,7 @@ class ParseTextRequest(BaseModel):
 
 class ParsedJob(BaseModel):
     company: Optional[str] = None
+    title: Optional[str] = None
     role: Optional[str] = None
     description: Optional[str] = None
     url: Optional[str] = None

@@ -4,12 +4,19 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas import MatchResult
-from app.services.match_service import match_resume_to_job_service
+from app.schemas import MatchHistoryResponse, MatchResult
+from app.services.match_service import get_user_matches, match_resume_to_job_service, serialize_match
 from app.dependencies import get_current_user
 from app.models import User
 
 router = APIRouter(prefix="/matches", tags=["matches"])
+
+@router.get("/", response_model=list[MatchHistoryResponse])
+def list_matches(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return [serialize_match(match) for match in get_user_matches(db, current_user.id)]
 
 
 @router.post("/{resume_id}/{job_id}", response_model=MatchResult)

@@ -58,7 +58,7 @@ function AddJob() {
     try {
       const response = await api.post(endpoint, payload);
       setCompany(response.data.company || '');
-      setRole(response.data.role || '');
+      setRole(response.data.title || response.data.role || '');
       setLocation(response.data.location || '');
       setSkills(Array.isArray(response.data.skills) ? response.data.skills.join(', ') : '');
       setRequirements(Array.isArray(response.data.requirements) ? response.data.requirements.join('\n') : '');

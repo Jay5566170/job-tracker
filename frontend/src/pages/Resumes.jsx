@@ -398,6 +398,11 @@ style={styles.skill}
     Skills are unavailable: {resume.extraction_error}
   </p>
 )}
+{resume.summary && (
+  <p style={{fontSize:"14px",lineHeight:1.5}}>
+    <strong>Summary:</strong> {resume.summary}
+  </p>
+)}
 
 
 

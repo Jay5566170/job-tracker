@@ -91,12 +91,18 @@ Resume:
 """
     data = _generate_json(prompt)
     skills = data.get("skills")
-    if not isinstance(skills, list) or not all(isinstance(skill, str) for skill in skills):
+    summary = data.get("summary")
+    if (
+        not isinstance(skills, list)
+        or not all(isinstance(skill, str) for skill in skills)
+        or not isinstance(summary, str)
+        or not summary.strip()
+    ):
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="The AI provider returned invalid resume skills. Please retry the extraction.",
+            detail="The AI provider returned invalid resume skills or summary. Please retry the extraction.",
         )
-    return {"skills": skills, "summary": data.get("summary")}
+    return {"skills": skills, "summary": summary.strip()}
 
 
 def match_resume_to_job(resume_skills: str, job_description: str) -> dict:
@@ -164,7 +170,7 @@ def parse_job_description(text: str) -> dict:
 Extract job information from the posting. Return ONLY a JSON object:
 {{
     "company": "Company name or null if not present",
-    "role": "Job title or null if not present",
+    "title": "Job title or null if not present",
     "location": "Location or null if not present",
     "description": "The complete relevant job description",
     "skills": ["required or preferred skills"],
@@ -185,10 +191,12 @@ Job posting:
                 detail="The AI provider returned invalid parsed job fields. Please retry.",
             )
         data[field] = value
-    for field in ("company", "role", "location", "description"):
+    for field in ("company", "title", "role", "location", "description"):
         value = data.get(field)
         data[field] = value.strip() if isinstance(value, str) and value.strip() else None
-    if not data["company"] or not data["role"]:
+    data["title"] = data.get("title") or data.get("role")
+    data["role"] = data["title"]
+    if not data["company"] or not data["title"]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Could not identify both a company and job title. Add them manually or try clearer job text.",

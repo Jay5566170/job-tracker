@@ -23,12 +23,14 @@ const [selectedResume,setSelectedResume]=useState("");
 const [selectedJob,setSelectedJob]=useState("");
 
 const [result,setResult]=useState(null);
+const [matchHistory,setMatchHistory]=useState([]);
 
 const [loading,setLoading]=useState(true);
 
 const [matching,setMatching]=useState(false);
 const [loadError,setLoadError]=useState("");
 const [matchError,setMatchError]=useState("");
+const [historyError,setHistoryError]=useState("");
 
 
 
@@ -52,8 +54,15 @@ api.get("/jobs/")
 setResumes(resumeResponse.data);
 
 setJobs(jobResponse.data);
-
-
+try {
+  const matchResponse = await api.get("/matches/");
+  setMatchHistory(matchResponse.data);
+  setHistoryError("");
+} catch (historyRequestError) {
+  if (historyRequestError.response?.status !== 404) throw historyRequestError;
+  setMatchHistory([]);
+  setHistoryError("Match history will be available when the backend is updated.");
+}
 
 }catch(error){
 
@@ -110,6 +119,14 @@ const response=await api.post(
 
 
 setResult(response.data);
+try {
+  const historyResponse=await api.get("/matches/");
+  setMatchHistory(historyResponse.data);
+  setHistoryError("");
+} catch (historyRequestError) {
+  if (historyRequestError.response?.status !== 404) throw historyRequestError;
+  setHistoryError("Match generated; saved history will appear after the backend is updated.");
+}
 
 
 
@@ -415,7 +432,6 @@ style={styles.good}
 
 }
 
-
 </div>
 
 
@@ -513,6 +529,23 @@ style={styles.bad}
 
 
 }
+
+<section style={styles.resultCard}>
+  <h2>Previous Matches</h2>
+  {historyError ? (
+    <p role="status">{historyError}</p>
+  ) : matchHistory.length === 0 ? (
+    <p>No saved matches yet.</p>
+  ) : (
+    matchHistory.map((match) => (
+      <article key={match.id} style={{borderTop:"1px solid #e5e7eb",padding:"12px 0"}}>
+        <strong>{match.match_score}% match</strong>
+        <span> · {new Date(match.created_at).toLocaleDateString()}</span>
+        <p>{match.recommendation}</p>
+      </article>
+    ))
+  )}
+</section>
 
 
 

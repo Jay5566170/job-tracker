@@ -1,5 +1,6 @@
 import os
 import unittest
+from datetime import timedelta
 from unittest.mock import patch
 
 os.environ["DATABASE_URL"] = "sqlite://"
@@ -13,6 +14,8 @@ from sqlalchemy.pool import StaticPool
 from app import database, main
 from app.database import Base
 from app.services import ai_service
+from app.utils.security import create_access_token
+from app.utils.url_fetcher import FetchedJobPage
 
 
 class UserIsolationE2ETest(unittest.TestCase):
@@ -70,6 +73,34 @@ class UserIsolationE2ETest(unittest.TestCase):
         self.assertEqual(response.status_code, 200, response.text)
         return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
+    @staticmethod
+    def text_pdf(text):
+        escaped = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        content = f"BT /F1 12 Tf 50 740 Td ({escaped}) Tj ET".encode()
+        objects = [
+            b"<< /Type /Catalog /Pages 2 0 R >>",
+            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+            b"<< /Length " + str(len(content)).encode() + b" >>\nstream\n" + content + b"\nendstream",
+        ]
+        document = bytearray(b"%PDF-1.4\n")
+        offsets = [0]
+        for number, body in enumerate(objects, start=1):
+            offsets.append(len(document))
+            document.extend(f"{number} 0 obj\n".encode() + body + b"\nendobj\n")
+        xref_offset = len(document)
+        document.extend(f"xref\n0 {len(offsets)}\n".encode())
+        document.extend(b"0000000000 65535 f \n")
+        for offset in offsets[1:]:
+            document.extend(f"{offset:010d} 00000 n \n".encode())
+        document.extend(
+            f"trailer\n<< /Size {len(offsets)} /Root 1 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF\n".encode()
+        )
+        return bytes(document)
+
     def test_two_users_are_isolated_across_dashboard_jobs_resumes_and_matches(self):
         with patch.object(
             ai_service,
@@ -92,7 +123,7 @@ class UserIsolationE2ETest(unittest.TestCase):
                 },
             ],
         ):
-            user_a = self.register_and_login("user-a@example.com")
+            user_a = self.register_and_login("testuserA@example.com")
             initial_stats = self.client.get("/dashboard/stats", headers=user_a).json()
             self.assertEqual(
                 initial_stats,
@@ -134,6 +165,7 @@ class UserIsolationE2ETest(unittest.TestCase):
             )
             self.assertEqual(resume.status_code, 201, resume.text)
             self.assertEqual(resume.json()["skills"], '["Python", "FastAPI"]')
+            self.assertEqual(resume.json()["summary"], "Backend engineer")
             resume_id = resume.json()["id"]
             owned_file = self.client.get(f"/resumes/{resume_id}/file", headers=user_a)
             self.assertEqual(owned_file.status_code, 200)
@@ -145,6 +177,7 @@ class UserIsolationE2ETest(unittest.TestCase):
             )
             self.assertEqual(match.status_code, 200, match.text)
             self.assertEqual(match.json()["match_score"], 87)
+            self.assertEqual(len(self.client.get("/matches/", headers=user_a).json()), 1)
 
             application = self.client.post(
                 "/applications/",
@@ -162,13 +195,14 @@ class UserIsolationE2ETest(unittest.TestCase):
             self.assertEqual(user_a_stats["applications"], 1)
             self.assertEqual(user_a_stats["interview"], 1)
 
-            user_b = self.register_and_login("user-b@example.com")
+            user_b = self.register_and_login("testuserB@example.com")
             user_b_stats = self.client.get("/dashboard/stats", headers=user_b).json()
             self.assertEqual(user_b_stats["total"], 0)
             self.assertTrue(all(value == 0 for value in user_b_stats.values()))
             self.assertEqual(self.client.get("/jobs/", headers=user_b).json(), [])
             self.assertEqual(self.client.get("/resumes/", headers=user_b).json(), [])
             self.assertEqual(self.client.get("/applications/", headers=user_b).json(), [])
+            self.assertEqual(self.client.get("/matches/", headers=user_b).json(), [])
 
             self.assertEqual(self.client.get(f"/jobs/{job_id}", headers=user_b).status_code, 404)
             self.assertEqual(self.client.get(f"/resumes/{resume_id}", headers=user_b).status_code, 404)
@@ -178,6 +212,9 @@ class UserIsolationE2ETest(unittest.TestCase):
             self.assertEqual(self.client.delete(f"/jobs/{job_id}", headers=user_b).status_code, 404)
             self.assertEqual(self.client.delete(f"/resumes/{resume_id}", headers=user_b).status_code, 404)
             self.assertEqual(self.client.delete(f"/resumes/{resume_id}", headers=user_a).status_code, 200)
+            self.assertEqual(self.client.get("/matches/", headers=user_a).json(), [])
+            self.assertEqual(self.client.delete(f"/jobs/{job_id}", headers=user_a).status_code, 200)
+            self.assertEqual(self.client.get("/dashboard/stats", headers=user_a).json()["total"], 0)
 
     def test_parser_handles_pasted_linkedin_posting(self):
         headers = self.register_and_login("linkedin-text@example.com")
@@ -211,6 +248,106 @@ class UserIsolationE2ETest(unittest.TestCase):
         self.assertEqual(response.json()["skills"], ["SQL", "Python"])
         self.assertEqual(response.json()["requirements"], ["Four years of experience"])
 
+    def test_url_parser_uses_structured_job_posting_metadata(self):
+        headers = self.register_and_login("structured-url@example.com")
+        structured = {
+            "company": "Sample Systems",
+            "title": "Platform Engineer",
+            "role": "Platform Engineer",
+            "location": "Seattle, WA, US",
+            "description": "Build resilient platform services.",
+            "skills": ["Python", "Kubernetes"],
+            "requirements": ["Five years of experience"],
+        }
+        with patch(
+            "app.routes.jobs.fetch_job_page",
+            return_value=FetchedJobPage(
+                text="Sample Systems Platform Engineer. Build resilient platform services.",
+                structured_job=structured,
+            ),
+        ), patch.object(ai_service, "_generate_json") as generate:
+            response = self.client.post(
+                "/jobs/parse-url",
+                headers=headers,
+                json={"url": "https://jobs.example.com/platform-engineer"},
+            )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["company"], "Sample Systems")
+        self.assertEqual(response.json()["title"], "Platform Engineer")
+        self.assertEqual(response.json()["role"], "Platform Engineer")
+        self.assertEqual(response.json()["location"], "Seattle, WA, US")
+        self.assertEqual(response.json()["skills"], ["Python", "Kubernetes"])
+        self.assertEqual(response.json()["requirements"], ["Five years of experience"])
+        self.assertEqual(response.json()["description"], "Build resilient platform services.")
+        generate.assert_not_called()
+
+    def test_extracts_standard_jobposting_jsonld_fields(self):
+        import json
+        from bs4 import BeautifulSoup
+        from app.utils.url_fetcher import _job_posting_metadata
+
+        posting = {
+            "@context": "https://schema.org",
+            "@type": "JobPosting",
+            "title": "Platform Engineer",
+            "hiringOrganization": {"@type": "Organization", "name": "Sample Systems"},
+            "jobLocation": {
+                "@type": "Place",
+                "address": {
+                    "@type": "PostalAddress",
+                    "addressLocality": "Seattle",
+                    "addressRegion": "WA",
+                    "addressCountry": "US",
+                },
+            },
+            "description": "<p>Build resilient platform services.</p>",
+            "skills": "Python, Kubernetes",
+            "qualifications": "Five years of experience",
+        }
+        soup = BeautifulSoup(
+            f'<script type="application/ld+json">{json.dumps(posting)}</script>',
+            "html.parser",
+        )
+        parsed = _job_posting_metadata(soup)
+        self.assertEqual(parsed["company"], "Sample Systems")
+        self.assertEqual(parsed["title"], "Platform Engineer")
+        self.assertEqual(parsed["location"], "Seattle, WA, US")
+        self.assertEqual(parsed["description"], "Build resilient platform services.")
+        self.assertEqual(parsed["skills"], ["Python", "Kubernetes"])
+        self.assertEqual(parsed["requirements"], ["Five years of experience"])
+
+    def test_real_pdf_upload_extracts_text_skills_and_summary(self):
+        headers = self.register_and_login("pdf-test@example.com")
+        content = self.text_pdf(
+            "Senior Python Engineer with experience in Python, FastAPI, PostgreSQL, "
+            "Docker, and cloud deployment. Built reliable backend services."
+        )
+        with patch.object(
+            ai_service,
+            "_generate_json",
+            return_value={
+                "skills": ["Python", "FastAPI", "PostgreSQL"],
+                "summary": "Senior backend engineer focused on reliable APIs.",
+            },
+        ):
+            response = self.client.post(
+                "/resumes/upload",
+                headers=headers,
+                files={"file": ("engineer-resume.pdf", content, "application/pdf")},
+            )
+        self.assertEqual(response.status_code, 201, response.text)
+        self.assertEqual(response.json()["skills"], '["Python", "FastAPI", "PostgreSQL"]')
+        self.assertEqual(
+            response.json()["summary"],
+            "Senior backend engineer focused on reliable APIs.",
+        )
+        resume_id = response.json()["id"]
+        self.assertEqual(
+            self.client.get(f"/resumes/{resume_id}/file", headers=headers).content,
+            content,
+        )
+        self.assertEqual(self.client.delete(f"/resumes/{resume_id}", headers=headers).status_code, 200)
+
     def test_missing_gemini_key_returns_clear_service_error(self):
         headers = self.register_and_login("no-ai@example.com")
         user_id = self.client.get("/auth/me", headers=headers).json()["id"]
@@ -239,6 +376,21 @@ class UserIsolationE2ETest(unittest.TestCase):
             response = self.client.post(f"/matches/{resume_id}/{job['id']}", headers=headers)
         self.assertEqual(response.status_code, 503)
         self.assertIn("GEMINI_API_KEY", response.json()["detail"])
+
+    def test_expired_token_is_rejected(self):
+        self.client.post(
+            "/auth/register",
+            json={"email": "expired-token@example.com", "password": "test-password-123"},
+        )
+        token = create_access_token(
+            {"sub": "expired-token@example.com"},
+            expires_delta=timedelta(seconds=-1),
+        )
+        response = self.client.get(
+            "/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 401)
 
     def test_legacy_database_gets_new_nullable_columns(self):
         legacy_engine = create_engine("sqlite://", poolclass=StaticPool)

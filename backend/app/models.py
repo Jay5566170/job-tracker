@@ -18,6 +18,7 @@ class User(Base):
     resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan")
     applications = relationship("Application", back_populates="user", cascade="all, delete-orphan")
     jobs = relationship("Job", back_populates="user", cascade="all, delete-orphan")  
+    matches = relationship("Match", back_populates="user", cascade="all, delete-orphan")
 
 class Job(Base):
     __tablename__ = "jobs"
@@ -36,6 +37,7 @@ class Job(Base):
     # Relationships
     user = relationship("User", back_populates="jobs")  # ← ADD THIS
     applications = relationship("Application", back_populates="job", cascade="all, delete-orphan")
+    matches = relationship("Match", back_populates="job", cascade="all, delete-orphan")
 
 
 class Resume(Base):
@@ -47,10 +49,12 @@ class Resume(Base):
     file_path = Column(String(500), nullable=False)
     skills = Column(Text, nullable=True)
     extraction_error = Column(Text, nullable=True)
+    summary = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     user = relationship("User", back_populates="resumes")
+    matches = relationship("Match", back_populates="resume", cascade="all, delete-orphan")
 
 
 class Application(Base):
@@ -67,3 +71,21 @@ class Application(Base):
     # Relationships
     user = relationship("User", back_populates="applications")
     job = relationship("Job", back_populates="applications")
+
+
+class Match(Base):
+    __tablename__ = "matches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    resume_id = Column(Integer, ForeignKey("resumes.id"), nullable=False)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False)
+    match_score = Column(Integer, nullable=False)
+    matching_skills = Column(Text, nullable=False)
+    missing_skills = Column(Text, nullable=False)
+    recommendation = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="matches")
+    resume = relationship("Resume", back_populates="matches")
+    job = relationship("Job", back_populates="matches")
